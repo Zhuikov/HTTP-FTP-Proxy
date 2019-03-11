@@ -6,7 +6,21 @@ import java.net.Socket;
 
 public class Proxy {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+
+
+        FTPClient ftpClient = new FTPClient();
+
+        System.out.println(ftpClient.connect("ftp.sunet.se"));
+
+        System.out.println(ftpClient.auth("anonymous", "easy_pass"));
+
+        byte[] data = null;
+        System.out.println(ftpClient.list("favicon.ico"));
+
+    }
+
+    public static void main1(String[] args) {
 
         int port = 7500;
         try (ServerSocket serverSocket = new ServerSocket(port)) {
