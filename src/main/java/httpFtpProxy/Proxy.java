@@ -3,20 +3,49 @@ package httpFtpProxy;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 
 public class Proxy {
 
+    static class ReplyDataStructure {
+        private String code = null;
+        private ArrayList<Character> data = null;
+
+        public ReplyDataStructure() {}
+
+        public String getCode() {
+            return code;
+        }
+
+        public ArrayList<Character> getData() {
+            return data;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public void setData(ArrayList<Character> data) {
+            this.data = data;
+        }
+    }
+
     public static void main(String[] args) throws IOException {
 
+        int a = 1000;
+        System.out.println((char)a + " " + (char) (a + 4));
 
         FTPClient ftpClient = new FTPClient();
 
-        System.out.println(ftpClient.connect("ftp.sunet.se"));
+        System.out.println("connect = " + ftpClient.connect("ftp.funet.fi"));
 
-        System.out.println(ftpClient.auth("anonymous", "easy_pass"));
+        System.out.println("auth = " + ftpClient.auth("anonymous", "easy_pass"));
 
         byte[] data = null;
-        System.out.println(ftpClient.list("favicon.ico"));
+        System.out.println("list = " + ftpClient.list("").getCode());
+
+        System.out.println("retr = " + ftpClient.retr("/pub/sports/shooting/ipsc/graphics/diagrams/rifle_target_dimensions.gif",
+                "/home/artem/Documents/test"));
 
     }
 

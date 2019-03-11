@@ -3,6 +3,7 @@ package httpFtpProxy;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
 
 public class FTPClient {
 
@@ -39,27 +40,70 @@ public class FTPClient {
         return readReply(controlIn).substring(0, 3);
     }
 
-    public String list(String path) throws IOException {
+    public Proxy.ReplyDataStructure list(String path) throws IOException {
 
-        PasvCodeSocket pasvCodeSocket = pasv();;
-        if (pasvCodeSocket.dataSoket == null)
-            return pasvCodeSocket.replyCode;
+        Proxy.ReplyDataStructure replyDataStructure = new Proxy.ReplyDataStructure();
+
+        sendCommand(controlOut, "type A");
+        readReply(controlIn);
+
+        PasvCodeSocket pasvCodeSocket = pasv();
+        if (pasvCodeSocket.dataSoket == null) {
+            replyDataStructure.setCode(readReply(controlIn).substring(0, 3));
+            return replyDataStructure;
+        }
 
         BufferedReader dataIn = new BufferedReader(new InputStreamReader(pasvCodeSocket.dataSoket.getInputStream()));
 
         sendCommand(controlOut, "list " + path);
-        int value = 0;
-        char c = 0;
+        readReply(controlIn); // read the first code (150)
+        replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code (226)
+
+        int value;
+        ArrayList<Character> inputData = new ArrayList<>();
         while ((value = dataIn.read()) != -1) {
-            c = (char)value;
-            System.out.print(c);
+            inputData.add((char)value);
+            System.out.print((char) value);
         }
-//        String listReply = readAll(dataIn);
         dataIn.close();
 
-//        System.out.println(listReply);
+        replyDataStructure.setData(inputData);
 
-        return "TODO structure in proxy";
+        return replyDataStructure;
+    }
+
+    public Proxy.ReplyDataStructure retr(String filePath, String destDir) throws IOException {
+
+        Proxy.ReplyDataStructure replyDataStructure = new Proxy.ReplyDataStructure();
+
+        sendCommand(controlOut, "type I");
+        readReply(controlIn);
+
+        PasvCodeSocket pasvCodeSocket = pasv();
+        if (pasvCodeSocket.dataSoket == null) {
+            replyDataStructure.setCode(pasvCodeSocket.replyCode.substring(0, 3));
+            return replyDataStructure;
+        }
+
+        BufferedReader dataIn = new BufferedReader(new InputStreamReader(pasvCodeSocket.dataSoket.getInputStream()));
+
+        sendCommand(controlOut, "retr " + filePath);
+        readReply(controlIn); // read the first code
+        replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code
+
+        int value;
+        ArrayList<Character> input = new ArrayList<>();
+        while ((value = dataIn.read()) != -1) {
+            input.add((char)value);
+        }
+        dataIn.close();
+
+        FileWriter fw = new FileWriter(destDir);
+        for (char b : input)
+            fw.write(b);
+        fw.close();
+
+        return replyDataStructure;
     }
 
 //    public void testRetr()
