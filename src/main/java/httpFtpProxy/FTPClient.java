@@ -13,11 +13,11 @@ public class FTPClient {
 
     private class PasvCodeSocket {
         private String replyCode;
-        private Socket dataSoket;
+        private Socket dataSocket;
 
-        public PasvCodeSocket(String replyCode, Socket dataSoket) {
+        public PasvCodeSocket(String replyCode, Socket dataSocket) {
             this.replyCode = replyCode;
-            this.dataSoket = dataSoket;
+            this.dataSocket = dataSocket;
         }
     }
 
@@ -40,56 +40,26 @@ public class FTPClient {
         return readReply(controlIn).substring(0, 3);
     }
 
-    public Proxy.ReplyDataStructure list(String path) throws IOException {
-
+    public Proxy.ReplyDataStructure sendDataCommand(String command, String filePath, char type) throws IOException {
         Proxy.ReplyDataStructure replyDataStructure = new Proxy.ReplyDataStructure();
 
-        sendCommand(controlOut, "type A");
+        sendCommand(controlOut, "type " + type);
         readReply(controlIn);
 
         PasvCodeSocket pasvCodeSocket = pasv();
-        if (pasvCodeSocket.dataSoket == null) {
-            replyDataStructure.setCode(readReply(controlIn).substring(0, 3));
-            return replyDataStructure;
-        }
-
-        sendCommand(controlOut, "list " + path);
-        readReply(controlIn); // read the first code (150)
-        replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code (226)
-
-        ArrayList<Character> cl = consumePasvData(pasvCodeSocket.dataSoket);
-        for (Character c : cl) {
-            System.out.print(c);
-        }
-
-        replyDataStructure.setData(cl);
-
-        return replyDataStructure;
-    }
-
-    public Proxy.ReplyDataStructure retr(String filePath, String destDir) throws IOException {
-
-        Proxy.ReplyDataStructure replyDataStructure = new Proxy.ReplyDataStructure();
-
-        sendCommand(controlOut, "type I");
-        readReply(controlIn);
-
-        PasvCodeSocket pasvCodeSocket = pasv();
-        if (pasvCodeSocket.dataSoket == null) {
+        if (pasvCodeSocket.dataSocket == null) {
             replyDataStructure.setCode(pasvCodeSocket.replyCode.substring(0, 3));
             return replyDataStructure;
         }
 
-        sendCommand(controlOut, "retr " + filePath);
-        readReply(controlIn); // read the first code
+        sendCommand(controlOut, command + " " + filePath);
+        System.out.println(readReply(controlIn).substring(0, 3)); // read the first code
+
+        ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
+        replyDataStructure.setData(input);
+
         replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code
 
-        ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSoket);
-
-        FileWriter fw = new FileWriter(destDir);
-        for (char b : input)
-            fw.write(b);
-        fw.close();
 
         return replyDataStructure;
     }
@@ -109,16 +79,6 @@ public class FTPClient {
         }
 
         return reply.toString();
-    }
-
-    private String readAll(BufferedReader in) throws IOException {
-        StringBuilder data = new StringBuilder();
-        String line;
-        while ((line = in.readLine()) != null) {
-            data.append(line).append('\n');
-        }
-
-        return data.toString();
     }
 
     private PasvCodeSocket pasv() throws IOException {
@@ -144,16 +104,17 @@ public class FTPClient {
     }
 
     private ArrayList<Character> consumePasvData(Socket dataSocket) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+        InputStream dataIn = dataSocket.getInputStream();
 
         int value;
         ArrayList<Character> data = new ArrayList<>();
-        while ((value = br.read()) != -1) {
+        while ((value = dataIn.read()) != -1) {
             data.add((char)value);
         }
-        br.close();
+        dataIn.close();
 
         return data;
     }
+
 
 }

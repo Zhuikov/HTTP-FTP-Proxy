@@ -29,23 +29,80 @@ public class Proxy {
             this.data = data;
         }
     }
+    private ServerSocket listeningSocket;
+    private Socket clientSocket;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
 
-        int a = 1000;
-        System.out.println((char)a + " " + (char) (a + 4));
+        Proxy proxy = new Proxy();
+        try {
+            proxy.start(7500);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public Proxy() {}
+
+    public void start(int port) throws IOException {
+
+        listeningSocket = new ServerSocket(7500);
+        String line;
+
+//        while (true) {
+            clientSocket = listeningSocket.accept();
+
+            BufferedReader clientBR = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            while ((line = clientBR.readLine()) != null) {
+                if (line.isEmpty()) {
+                    System.out.println("EMPTY LINE");
+                    break;
+                }
+                System.out.println(line);
+            }
+
+            clientBR.close();
+            clientSocket.close();
+
+//        }
+    }
+
+    // ftp testing
+    public static void main2(String[] args) throws IOException {
 
         FTPClient ftpClient = new FTPClient();
 
-        System.out.println("connect = " + ftpClient.connect("ftp.funet.fi"));
+        System.out.println("connect = " + ftpClient.connect("speedtest.tele2.net"));
 
         System.out.println("auth = " + ftpClient.auth("anonymous", "easy_pass"));
 
-        byte[] data = null;
-        System.out.println("list = " + ftpClient.list("").getCode());
+        ReplyDataStructure replyDataStructure = ftpClient.sendDataCommand("list","", 'A');
+        System.out.println("list = " + replyDataStructure.getCode());
+        for (char c : replyDataStructure.getData()) {
+            System.out.print(c);
+        }
 
-        System.out.println("retr = " + ftpClient.retr("/pub/sports/shooting/ipsc/graphics/diagrams/rifle_target_dimensions.gif",
-                "/home/artem/Documents/test").getCode());
+        replyDataStructure = ftpClient.sendDataCommand("retr",
+                "512KB.zip", 'I');
+        System.out.println("retr = " + replyDataStructure.getCode());
+
+        // save retr file test:
+        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/512KB.zip");
+        for (char b : replyDataStructure.getData()) {
+            fileOut.write(b);
+        }
+        fileOut.close();
+
+//        replyDataStructure = ftpClient.sendDataCommand("retr","README", 'A');
+//        System.out.println("retr = " + replyDataStructure.getCode());
+//
+//        // save retr file test:
+//        fileOut = new FileOutputStream("/home/artem/Documents/README");
+//        for (char b : replyDataStructure.getData()) {
+//            fileOut.write(b);
+//        }
+//        fileOut.close();
 
     }
 
