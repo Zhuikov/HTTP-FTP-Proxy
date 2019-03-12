@@ -45,7 +45,7 @@ public class Proxy {
         System.out.println("list = " + ftpClient.list("").getCode());
 
         System.out.println("retr = " + ftpClient.retr("/pub/sports/shooting/ipsc/graphics/diagrams/rifle_target_dimensions.gif",
-                "/home/artem/Documents/test"));
+                "/home/artem/Documents/test").getCode());
 
     }
 

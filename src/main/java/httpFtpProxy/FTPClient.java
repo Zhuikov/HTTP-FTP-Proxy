@@ -53,21 +53,16 @@ public class FTPClient {
             return replyDataStructure;
         }
 
-        BufferedReader dataIn = new BufferedReader(new InputStreamReader(pasvCodeSocket.dataSoket.getInputStream()));
-
         sendCommand(controlOut, "list " + path);
         readReply(controlIn); // read the first code (150)
         replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code (226)
 
-        int value;
-        ArrayList<Character> inputData = new ArrayList<>();
-        while ((value = dataIn.read()) != -1) {
-            inputData.add((char)value);
-            System.out.print((char) value);
+        ArrayList<Character> cl = consumePasvData(pasvCodeSocket.dataSoket);
+        for (Character c : cl) {
+            System.out.print(c);
         }
-        dataIn.close();
 
-        replyDataStructure.setData(inputData);
+        replyDataStructure.setData(cl);
 
         return replyDataStructure;
     }
@@ -85,18 +80,11 @@ public class FTPClient {
             return replyDataStructure;
         }
 
-        BufferedReader dataIn = new BufferedReader(new InputStreamReader(pasvCodeSocket.dataSoket.getInputStream()));
-
         sendCommand(controlOut, "retr " + filePath);
         readReply(controlIn); // read the first code
         replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code
 
-        int value;
-        ArrayList<Character> input = new ArrayList<>();
-        while ((value = dataIn.read()) != -1) {
-            input.add((char)value);
-        }
-        dataIn.close();
+        ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSoket);
 
         FileWriter fw = new FileWriter(destDir);
         for (char b : input)
@@ -105,8 +93,6 @@ public class FTPClient {
 
         return replyDataStructure;
     }
-
-//    public void testRetr()
 
     private void sendCommand(BufferedWriter out, String command) throws IOException {
         out.write(command);
@@ -155,6 +141,19 @@ public class FTPClient {
         int dataPort = Integer.parseInt(numberStrings[4]) * 256 + Integer.parseInt(numberStrings[5]);
 
         return new PasvCodeSocket(code, new Socket(addressString.toString(), dataPort));
+    }
+
+    private ArrayList<Character> consumePasvData(Socket dataSocket) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+
+        int value;
+        ArrayList<Character> data = new ArrayList<>();
+        while ((value = br.read()) != -1) {
+            data.add((char)value);
+        }
+        br.close();
+
+        return data;
     }
 
 }
