@@ -32,7 +32,7 @@ public class Proxy {
     private ServerSocket listeningSocket;
     private Socket clientSocket;
 
-    public static void main(String[] args) {
+    public static void main3(String[] args) {
 
         Proxy proxy = new Proxy();
         try {
@@ -69,41 +69,38 @@ public class Proxy {
     }
 
     // ftp testing
-    public static void main2(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException {
 
         FTPClient ftpClient = new FTPClient();
 
-        System.out.println("connect = " + ftpClient.connect("speedtest.tele2.net"));
+        System.out.println("connect = " + ftpClient.connect("192.168.0.27"));
 
-        System.out.println("auth = " + ftpClient.auth("anonymous", "easy_pass"));
+        System.out.println("auth = " + ftpClient.auth("artem", "artem"));
 
-        ReplyDataStructure replyDataStructure = ftpClient.sendDataCommand("list","", 'A');
+        FileInputStream fileInputStream = new FileInputStream("/home/artem/Pictures/RPN.jpg");
+        int i;
+        ArrayList<Character> file = new ArrayList<>();
+        while ((i = fileInputStream.read()) != -1) {
+            file.add((char)i);
+        }
+        fileInputStream.close();
+        System.out.println("stor = " + ftpClient.stor(file, "/ftp/RPN"));
+
+        ReplyDataStructure replyDataStructure = ftpClient.sendDataCommand("list","/ftp/", 'A');
         System.out.println("list = " + replyDataStructure.getCode());
         for (char c : replyDataStructure.getData()) {
             System.out.print(c);
         }
 
-        replyDataStructure = ftpClient.sendDataCommand("retr",
-                "512KB.zip", 'I');
+        replyDataStructure = ftpClient.sendDataCommand("retr","/ftp/RPN", 'I');
         System.out.println("retr = " + replyDataStructure.getCode());
 
         // save retr file test:
-        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/512KB.zip");
+        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/downloadedRPN.jpg");
         for (char b : replyDataStructure.getData()) {
             fileOut.write(b);
         }
         fileOut.close();
-
-//        replyDataStructure = ftpClient.sendDataCommand("retr","README", 'A');
-//        System.out.println("retr = " + replyDataStructure.getCode());
-//
-//        // save retr file test:
-//        fileOut = new FileOutputStream("/home/artem/Documents/README");
-//        for (char b : replyDataStructure.getData()) {
-//            fileOut.write(b);
-//        }
-//        fileOut.close();
-
     }
 
     public static void main1(String[] args) {

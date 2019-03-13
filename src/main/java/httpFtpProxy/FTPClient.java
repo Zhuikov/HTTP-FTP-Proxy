@@ -53,15 +53,36 @@ public class FTPClient {
         }
 
         sendCommand(controlOut, command + " " + filePath);
-        System.out.println(readReply(controlIn).substring(0, 3)); // read the first code
+        System.out.println("first code = " + readReply(controlIn).substring(0, 3)); // read the first code
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
         replyDataStructure.setData(input);
-
         replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code
 
-
         return replyDataStructure;
+    }
+
+    // filePath -- place on server
+    public String stor(ArrayList<Character> data, String filePath) throws IOException {
+
+        sendCommand(controlOut, "type I");
+        readReply(controlIn);
+
+        PasvCodeSocket pasvCodeSocket = pasv();
+        if (pasvCodeSocket.dataSocket == null)
+            return pasvCodeSocket.replyCode;
+
+        sendCommand(controlOut, "stor " + filePath);
+
+        OutputStream os = pasvCodeSocket.dataSocket.getOutputStream();
+        for (char c : data)
+            os.write(c);
+        os.flush();
+        os.close();
+
+        System.out.println("first code = " + readReply(controlIn));   // the first code
+
+        return readReply(controlIn).substring(0, 3);
     }
 
     private void sendCommand(BufferedWriter out, String command) throws IOException {
