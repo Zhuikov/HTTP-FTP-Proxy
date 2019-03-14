@@ -30,16 +30,16 @@ public class Proxy {
         }
     }
     static class HTTPRequest {
-        private String method = null;
+        private Method method = null;
         private String path = null;
         private String hostName = null;
         private ArrayList<Character> body = null;
 
-        public String getMethod() {
+        public Method getMethod() {
             return method;
         }
 
-        public void setMethod(String method) {
+        public void setMethod(Method method) {
             this.method = method;
         }
 
@@ -67,6 +67,8 @@ public class Proxy {
             this.body = body;
         }
     }
+
+    public enum Method { GET, PUT };
 
     private ServerSocket listeningSocket;
     private Socket clientSocket;

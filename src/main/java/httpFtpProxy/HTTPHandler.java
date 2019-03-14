@@ -14,27 +14,27 @@ public class HTTPHandler {
 
     public Proxy.HTTPRequest receiveRequest(Socket socket) throws IOException {
         Proxy.HTTPRequest httpRequest = new Proxy.HTTPRequest();
-        String request = readRequest(socket);
+        String requestHeaders = readRequestHeaders(socket);
 
-        String[] requestLines = request.split("\n");
+        String[] requestLines = requestHeaders.split("\n");
 
         String[] firstRequestLine = requestLines[0].split(" ");
-        httpRequest.setMethod(firstRequestLine[0]);
+        if (firstRequestLine[0].equals("PUT")) httpRequest.setMethod(Proxy.Method.PUT);
+        else if (firstRequestLine[0].equals("GET")) httpRequest.setMethod(Proxy.Method.GET);
         httpRequest.setPath(firstRequestLine[1]);
 
         String[] secondRequestLine = requestLines[1].split(" ");
         httpRequest.setHostName(secondRequestLine[1]);
 
-        if (!requestLines[requestLines.length - 1].isEmpty()) {
-            char[] lastString = requestLines[requestLines.length - 1].toCharArray();
-            List body = Arrays.asList(lastString);
-            httpRequest.setBody(new ArrayList<Character>(body));
+        if (httpRequest.getMethod() == Proxy.Method.PUT) {
+            // дочитывает из сокета строку после заголовков
+            httpRequest.setBody(readRequestBody(socket));
         }
 
         return httpRequest;
     }
 
-    private String readRequest(Socket socket) throws IOException {
+    private String readRequestHeaders(Socket socket) throws IOException {
         BufferedReader bf = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         StringBuilder request = new StringBuilder();
         String line;
@@ -44,8 +44,19 @@ public class HTTPHandler {
                     .append(line)
                     .append("\n");
         }
+        bf.close();
 
         return request.toString();
+    }
+
+    private ArrayList<Character> readRequestBody(Socket socket) throws IOException {
+        BufferedReader bf = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        String bodyString = bf.readLine();
+        bf.close();
+
+        List body = Arrays.asList(bodyString.toCharArray());
+
+        return new ArrayList<Character>(body);
     }
 
 }
