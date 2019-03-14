@@ -7,11 +7,11 @@ import java.util.ArrayList;
 
 public class Proxy {
 
-    static class ReplyDataStructure {
+    static class DataAndCode {
         private String code = null;
         private ArrayList<Character> data = null;
 
-        public ReplyDataStructure() {}
+        public DataAndCode() {}
 
         public String getCode() {
             return code;
@@ -29,14 +29,55 @@ public class Proxy {
             this.data = data;
         }
     }
+    static class HTTPRequest {
+        private String method = null;
+        private String path = null;
+        private String hostName = null;
+        private ArrayList<Character> body = null;
+
+        public String getMethod() {
+            return method;
+        }
+
+        public void setMethod(String method) {
+            this.method = method;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public String getHostName() {
+            return hostName;
+        }
+
+        public void setHostName(String hostName) {
+            this.hostName = hostName;
+        }
+
+        public ArrayList<Character> getBody() {
+            return body;
+        }
+
+        public void setBody(ArrayList<Character> body) {
+            this.body = body;
+        }
+    }
+
     private ServerSocket listeningSocket;
     private Socket clientSocket;
+    private FTPClient ftpClient = new FTPClient();
 
-    public static void main3(String[] args) {
+    public static void main(String[] args) {
 
         Proxy proxy = new Proxy();
         try {
             proxy.start(7500);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -47,29 +88,36 @@ public class Proxy {
 
     public void start(int port) throws IOException {
 
+        HTTPHandler httpHandler = new HTTPHandler();
+
         listeningSocket = new ServerSocket(7500);
         String line;
 
-//        while (true) {
-            clientSocket = listeningSocket.accept();
 
-            BufferedReader clientBR = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            while ((line = clientBR.readLine()) != null) {
-                if (line.isEmpty()) {
-                    System.out.println("EMPTY LINE");
-                    break;
-                }
-                System.out.println(line);
-            }
+        clientSocket = listeningSocket.accept();
+        HTTPRequest request = httpHandler.receiveRequest(clientSocket);
 
-            clientBR.close();
-            clientSocket.close();
+        System.out.println("Method = " + request.getMethod() +
+                "\nHost = " + request.getHostName() +
+                "\nPath = " + request.getPath() +
+                "\nBody = " + request.getBody());
 
-//        }
+        clientSocket.close();
+
+    }
+
+    private DataAndCode processGET(HTTPRequest httpRequest) {
+
+        return new DataAndCode();
+    }
+
+    private String processPUT (HTTPRequest httpRequest) {
+
+        return "150 ?";
     }
 
     // ftp testing
-    public static void main(String[] args) throws IOException {
+    public static void main3(String[] args) throws IOException {
 
         FTPClient ftpClient = new FTPClient();
 
@@ -86,60 +134,21 @@ public class Proxy {
         fileInputStream.close();
         System.out.println("stor = " + ftpClient.stor(file, "/ftp/RPN"));
 
-        ReplyDataStructure replyDataStructure = ftpClient.sendDataCommand("list","/ftp/", 'A');
-        System.out.println("list = " + replyDataStructure.getCode());
-        for (char c : replyDataStructure.getData()) {
+        DataAndCode dataAndCode = ftpClient.sendDataCommand("list","/ftp/", 'A');
+        System.out.println("list = " + dataAndCode.getCode());
+        for (char c : dataAndCode.getData()) {
             System.out.print(c);
         }
 
-        replyDataStructure = ftpClient.sendDataCommand("retr","/ftp/RPN", 'I');
-        System.out.println("retr = " + replyDataStructure.getCode());
+        dataAndCode = ftpClient.sendDataCommand("retr","/ftp/RPN", 'I');
+        System.out.println("retr = " + dataAndCode.getCode());
 
         // save retr file test:
         OutputStream fileOut = new FileOutputStream("/home/artem/Documents/downloadedRPN.jpg");
-        for (char b : replyDataStructure.getData()) {
+        for (char b : dataAndCode.getData()) {
             fileOut.write(b);
         }
         fileOut.close();
-    }
-
-    public static void main1(String[] args) {
-
-        int port = 7500;
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Server run on port : " + port);
-
-            String line;
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Connected");
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-
-                while ((line = in.readLine()) != null) {
-                    System.out.println(line);
-                    if (line.isEmpty())
-                        break;
-                }
-                out.write("HTTP/1.1 200 OK\r\n");
-//                out.write("Date: Mon, 25 Feb 2019 18:12:20 GMT\r\n");
-//                out.write("Server: Apache/1.3.27\r\n");
-                out.write("Content-Type: text/html\r\n");
-                out.write("Content-Length: 57\r\n");
-                out.write("\r\n");
-                out.write("<title>Hello JAVA</title>");
-                out.write("<p>This is the best example!</p>");
-//                out.flush();
-
-                out.close();
-                in.close();
-                clientSocket.close();
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
     }
 
 }

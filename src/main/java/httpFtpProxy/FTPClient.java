@@ -40,26 +40,26 @@ public class FTPClient {
         return readReply(controlIn).substring(0, 3);
     }
 
-    public Proxy.ReplyDataStructure sendDataCommand(String command, String filePath, char type) throws IOException {
-        Proxy.ReplyDataStructure replyDataStructure = new Proxy.ReplyDataStructure();
+    public Proxy.DataAndCode sendDataCommand(String command, String filePath, char type) throws IOException {
+        Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
 
         sendCommand(controlOut, "type " + type);
         readReply(controlIn);
 
         PasvCodeSocket pasvCodeSocket = pasv();
         if (pasvCodeSocket.dataSocket == null) {
-            replyDataStructure.setCode(pasvCodeSocket.replyCode.substring(0, 3));
-            return replyDataStructure;
+            dataAndCode.setCode(pasvCodeSocket.replyCode.substring(0, 3));
+            return dataAndCode;
         }
 
         sendCommand(controlOut, command + " " + filePath);
         System.out.println("first code = " + readReply(controlIn).substring(0, 3)); // read the first code
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
-        replyDataStructure.setData(input);
-        replyDataStructure.setCode(readReply(controlIn).substring(0, 3)); // read the second code
+        dataAndCode.setData(input);
+        dataAndCode.setCode(readReply(controlIn).substring(0, 3)); // read the second code
 
-        return replyDataStructure;
+        return dataAndCode;
     }
 
     // filePath -- place on server
@@ -86,7 +86,7 @@ public class FTPClient {
     }
 
     private void sendCommand(BufferedWriter out, String command) throws IOException {
-        out.write(command);
+        out.write(command); http://www.w3.org/pub/WWW/TheProject.html HTTP/1.1
         out.newLine();
         out.flush();
     }
