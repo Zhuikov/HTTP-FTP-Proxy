@@ -17,7 +17,7 @@ public class HTTPHandler {
     public Proxy.HTTPRequest receiveRequest(Socket socket) throws IOException {
         Proxy.HTTPRequest httpRequest = new Proxy.HTTPRequest();
 //        String requestHeaders = readRequestHeaders(socket);
-        String requestHeaders = "GET ftp.funet.fi/ HTTP1.1\nHost: 127.0.0.1\n" +
+        String requestHeaders = "GET ftp.funet.fi/pub/ HTTP1.1\nHost: 127.0.0.1\n" +
                 "Authorization: Basic YW5vbnltb3VzOjEyMzEyMw==\n\n";
 
         String[] requestLines = requestHeaders.split("\n");

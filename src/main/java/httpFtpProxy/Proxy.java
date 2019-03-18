@@ -111,7 +111,7 @@ public class Proxy {
 
         HTTPHandler httpHandler = new HTTPHandler();
 
-        listeningSocket = new ServerSocket(7500);
+        listeningSocket = new ServerSocket(port);
 
         clientSocket = listeningSocket.accept();
         HTTPRequest httpRequest = httpHandler.receiveRequest(clientSocket);
@@ -123,16 +123,17 @@ public class Proxy {
                 "\nPass = " + httpRequest.getPassword() +
                 "\nBody = " + httpRequest.getBody());
 
-        // проверить конект
-        ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
-        // проверить логин
-        ftpClient.auth(httpRequest.login, httpRequest.password);
+        //todo проверить конект
+        System.out.println("connect = " + ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/'))));
+        //todo проверить логин
+        System.out.println("auth = " + ftpClient.auth(httpRequest.login, httpRequest.password));
 
         DataAndCode getResponse;
         String putResponse;
         switch (httpRequest.getMethod()) {
             case GET: {
                 getResponse = processRequestGET(httpRequest);
+                System.out.println("ftp response GET:\n\tcode = " + getResponse.code);
                 sendResponseGET(clientSocket, getResponse);
             }
             case PUT: {
@@ -140,7 +141,8 @@ public class Proxy {
             }
         }
 
-        clientSocket.close();
+            clientSocket.close();
+
     }
 
     private DataAndCode processRequestGET(HTTPRequest httpRequest) throws IOException {
@@ -148,9 +150,9 @@ public class Proxy {
         DataAndCode dataAndCode;
         String path = httpRequest.getPath();
         if (path.charAt(path.length() - 1) == '/')
-            dataAndCode = ftpClient.sendDataCommand("list", path, 'A');
+            dataAndCode = ftpClient.sendDataCommand("list", path.substring(path.indexOf('/')), 'A');
         else
-            dataAndCode = ftpClient.sendDataCommand("retr", path, 'I');
+            dataAndCode = ftpClient.sendDataCommand("retr", path.substring(path.indexOf('/')), 'I');
 
         return dataAndCode;
     }
