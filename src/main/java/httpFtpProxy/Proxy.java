@@ -33,6 +33,25 @@ public class Proxy {
         private Method method = null;
         private String path = null;
         private String hostName = null;
+        private String login = null;
+
+        public String getLogin() {
+            return login;
+        }
+
+        public void setLogin(String login) {
+            this.login = login;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        private String password = null;
         private ArrayList<Character> body = null;
 
         public Method getMethod() {
@@ -93,33 +112,72 @@ public class Proxy {
         HTTPHandler httpHandler = new HTTPHandler();
 
         listeningSocket = new ServerSocket(7500);
-        String line;
-
 
         clientSocket = listeningSocket.accept();
-        HTTPRequest request = httpHandler.receiveRequest(clientSocket);
+        HTTPRequest httpRequest = httpHandler.receiveRequest(clientSocket);
 
-        System.out.println("Method = " + request.getMethod() +
-                "\nHost = " + request.getHostName() +
-                "\nPath = " + request.getPath() +
-                "\nBody = " + request.getBody());
+        System.out.println("Method = " + httpRequest.getMethod() +
+                "\nHost = " + httpRequest.getHostName() +
+                "\nPath = " + httpRequest.getPath() +
+                "\nLogin = " + httpRequest.getLogin() +
+                "\nPass = " + httpRequest.getPassword() +
+                "\nBody = " + httpRequest.getBody());
+
+        // проверить конект
+        ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
+        // проверить логин
+        ftpClient.auth(httpRequest.login, httpRequest.password);
+
+        DataAndCode getResponse;
+        String putResponse;
+        switch (httpRequest.getMethod()) {
+            case GET: {
+                getResponse = processRequestGET(httpRequest);
+                sendResponseGET(clientSocket, getResponse);
+            }
+            case PUT: {
+                putResponse = processRequestPUT(httpRequest);
+            }
+        }
 
         clientSocket.close();
-
     }
 
-    private DataAndCode processGET(HTTPRequest httpRequest) {
+    private DataAndCode processRequestGET(HTTPRequest httpRequest) throws IOException {
 
-        return new DataAndCode();
+        DataAndCode dataAndCode;
+        String path = httpRequest.getPath();
+        if (path.charAt(path.length() - 1) == '/')
+            dataAndCode = ftpClient.sendDataCommand("list", path, 'A');
+        else
+            dataAndCode = ftpClient.sendDataCommand("retr", path, 'I');
+
+        return dataAndCode;
     }
 
-    private String processPUT (HTTPRequest httpRequest) {
+    private void sendResponseGET(Socket socket, DataAndCode dataAndCode) throws IOException {
+        OutputStream os = socket.getOutputStream();
+        os.write(("HTTP/1.1 200 Ok\nContent-Length: " + dataAndCode.data.size() + '\n' + '\n').getBytes());
+        if (dataAndCode.data.size() != 0) {
+            os.write('\n');
+            for (char c : dataAndCode.data) {
+                os.write(c);
+            }
+        }
+    }
+
+    private String processRequestPUT(HTTPRequest httpRequest) {
 
         return "150 ?";
     }
 
+//    private String makeResponseHeaders(String code, int contentLength) {
+//        String responseHeader = "HTTP/1.1 200 Ok\nContent-Length: ";
+//
+//    }
+
     // ftp testing
-    public static void main3(String[] args) throws IOException {
+    public static void main1(String[] args) throws IOException {
 
         FTPClient ftpClient = new FTPClient();
 
@@ -146,7 +204,7 @@ public class Proxy {
         System.out.println("retr = " + dataAndCode.getCode());
 
         // save retr file test:
-        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/downloadedRPN.jpg");
+        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/downloadedRPN1.jpg");
         for (char b : dataAndCode.getData()) {
             fileOut.write(b);
         }

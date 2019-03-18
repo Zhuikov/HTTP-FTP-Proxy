@@ -7,17 +7,22 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
 public class HTTPHandler {
 
+    private static final String authorizationString = "Authorization: Basic ";
 
     public Proxy.HTTPRequest receiveRequest(Socket socket) throws IOException {
         Proxy.HTTPRequest httpRequest = new Proxy.HTTPRequest();
-        String requestHeaders = readRequestHeaders(socket);
+//        String requestHeaders = readRequestHeaders(socket);
+        String requestHeaders = "GET ftp.funet.fi/ HTTP1.1\nHost: 127.0.0.1\n" +
+                "Authorization: Basic YW5vbnltb3VzOjEyMzEyMw==\n\n";
 
         String[] requestLines = requestHeaders.split("\n");
 
+        System.out.println("SOCKET AFTER READ HEADERS = " + socket.isClosed());
         String[] firstRequestLine = requestLines[0].split(" ");
         if (firstRequestLine[0].equals("PUT")) httpRequest.setMethod(Proxy.Method.PUT);
         else if (firstRequestLine[0].equals("GET")) httpRequest.setMethod(Proxy.Method.GET);
@@ -25,6 +30,18 @@ public class HTTPHandler {
 
         String[] secondRequestLine = requestLines[1].split(" ");
         httpRequest.setHostName(secondRequestLine[1]);
+
+
+        for (String s : requestLines) {
+            if (s.length() > authorizationString.length() &&
+                    s.substring(0, authorizationString.length()).equals(authorizationString)) {
+                String decodedLoginPass = new String(Base64.getDecoder().decode(s.substring(authorizationString.length())));
+                String[] loginPass = decodedLoginPass.split(":");
+                httpRequest.setLogin(loginPass[0]);
+                httpRequest.setPassword(loginPass[1]);
+            }
+        }
+
 
         if (httpRequest.getMethod() == Proxy.Method.PUT) {
             // дочитывает из сокета строку после заголовков
@@ -44,7 +61,7 @@ public class HTTPHandler {
                     .append(line)
                     .append("\n");
         }
-        bf.close();
+//        bf.close();
 
         return request.toString();
     }

@@ -44,7 +44,11 @@ public class FTPClient {
         Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
 
         sendCommand(controlOut, "type " + type);
-        readReply(controlIn);
+        String reply = readReply(controlIn).substring(0, 3);
+        if (!reply.equals("200")) {
+            dataAndCode.setCode(reply);
+            return dataAndCode;
+        }
 
         PasvCodeSocket pasvCodeSocket = pasv();
         if (pasvCodeSocket.dataSocket == null) {
@@ -53,7 +57,12 @@ public class FTPClient {
         }
 
         sendCommand(controlOut, command + " " + filePath);
-        System.out.println("first code = " + readReply(controlIn).substring(0, 3)); // read the first code
+        reply = readReply(controlIn).substring(0, 3);
+        System.out.println("first code = " + reply); // read the first code
+        if (!(reply.substring(0, 3).equals("125") || reply.substring(0, 3).equals("150"))) {
+            dataAndCode.setCode(reply.substring(0, 3));
+            return dataAndCode;
+        }
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
         dataAndCode.setData(input);
@@ -86,7 +95,7 @@ public class FTPClient {
     }
 
     private void sendCommand(BufferedWriter out, String command) throws IOException {
-        out.write(command); http://www.w3.org/pub/WWW/TheProject.html HTTP/1.1
+        out.write(command);
         out.newLine();
         out.flush();
     }
