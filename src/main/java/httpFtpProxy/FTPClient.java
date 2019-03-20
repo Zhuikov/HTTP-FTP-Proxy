@@ -71,6 +71,24 @@ public class FTPClient {
         return dataAndCode;
     }
 
+    public Proxy.DataAndCode pwd() throws IOException {
+
+        Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
+        sendCommand(controlOut, "pwd");
+        String reply = readReply(controlIn);
+
+        dataAndCode.setCode(reply.substring(0, 3));
+
+        if (dataAndCode.getCode().equals("257")) {
+            ArrayList<Character> path = new ArrayList<>();
+            for (char c : reply.substring(reply.indexOf("\""), reply.lastIndexOf("\"")).toCharArray())
+                path.add(c);
+            dataAndCode.setData(path);
+        }
+
+        return dataAndCode;
+    }
+
     // filePath -- place on server
     public String stor(ArrayList<Character> data, String filePath) throws IOException {
 
