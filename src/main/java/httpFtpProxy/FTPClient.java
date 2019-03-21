@@ -8,8 +8,6 @@ import java.util.ArrayList;
 public class FTPClient {
 
     private Socket controlSocket;
-    private BufferedReader controlIn;
-    private BufferedWriter controlOut;
 
     private class PasvCodeSocket {
         private String replyCode;
@@ -23,30 +21,32 @@ public class FTPClient {
 
     public FTPClient() {}
 
+
     public String connect(String address) throws IOException {
         controlSocket = new Socket(address, 21);
-        controlIn = new BufferedReader(new InputStreamReader(controlSocket.getInputStream()));
-        controlOut = new BufferedWriter(new OutputStreamWriter(controlSocket.getOutputStream()));
+        return readResponse(controlSocket).substring(0, 3);
+    }
 
-        return readReply(controlIn).substring(0, 3);
+    public void disconnect() throws IOException {
+        controlSocket.close();
     }
 
     public String auth(String user, String pass) throws IOException {
-        sendCommand(controlOut, "user " + user);
-        readReply(controlIn);
+        sendCommand(controlSocket, "user " + user);
+        readResponse(controlSocket);
 
-        sendCommand(controlOut, "pass " + pass);
-
-        return readReply(controlIn).substring(0, 3);
+        sendCommand(controlSocket, "pass " + pass);
+        return readResponse(controlSocket).substring(0, 3);
     }
 
     public Proxy.DataAndCode sendDataCommand(String command, String filePath, char type) throws IOException {
-        Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
 
-        sendCommand(controlOut, "type " + type);
-        String reply = readReply(controlIn).substring(0, 3);
-        if (!reply.equals("200")) {
-            dataAndCode.setCode(reply);
+        Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
+        sendCommand(controlSocket, "type " + type);
+
+        String response = readResponse(controlSocket).substring(0, 3);
+        if (!response.equals("200")) {
+            dataAndCode.setCode(response);
             return dataAndCode;
         }
 
@@ -56,17 +56,16 @@ public class FTPClient {
             return dataAndCode;
         }
 
-        sendCommand(controlOut, command + " " + filePath);
-        reply = readReply(controlIn).substring(0, 3);
-        System.out.println("first code = " + reply); // read the first code
-        if (!(reply.substring(0, 3).equals("125") || reply.substring(0, 3).equals("150"))) {
-            dataAndCode.setCode(reply.substring(0, 3));
+        sendCommand(controlSocket, command + " " + filePath);
+        response = readResponse(controlSocket).substring(0, 3); // read the first code
+        if (!(response.substring(0, 3).equals("125") || response.substring(0, 3).equals("150"))) {
+            dataAndCode.setCode(response.substring(0, 3));
             return dataAndCode;
         }
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
         dataAndCode.setData(input);
-        dataAndCode.setCode(readReply(controlIn).substring(0, 3)); // read the second code
+        dataAndCode.setCode(readResponse(controlSocket).substring(0, 3)); // read the second code
 
         return dataAndCode;
     }
@@ -74,51 +73,61 @@ public class FTPClient {
     public Proxy.DataAndCode pwd() throws IOException {
 
         Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
-        sendCommand(controlOut, "pwd");
-        String reply = readReply(controlIn);
+        sendCommand(controlSocket, "pwd");
 
-        dataAndCode.setCode(reply.substring(0, 3));
+        String response = readResponse(controlSocket);
+        dataAndCode.setCode(response.substring(0, 3));
 
         if (dataAndCode.getCode().equals("257")) {
-            ArrayList<Character> path = new ArrayList<>();
-            for (char c : reply.substring(reply.indexOf("\""), reply.lastIndexOf("\"")).toCharArray())
-                path.add(c);
-            dataAndCode.setData(path);
+            ArrayList<Character> currentPath = new ArrayList<>();
+            for (char c : response.substring(response.indexOf("\"") + 1, response.lastIndexOf("\"")).toCharArray())
+                currentPath.add(c);
+            dataAndCode.setData(currentPath);
         }
 
         return dataAndCode;
     }
 
+    public String cwd(String newDir) throws IOException {
+        sendCommand(controlSocket, "cwd " + newDir);
+        return readResponse(controlSocket).substring(0, 3);
+    }
+
     // filePath -- place on server
     public String stor(ArrayList<Character> data, String filePath) throws IOException {
 
-        sendCommand(controlOut, "type I");
-        readReply(controlIn);
+        sendCommand(controlSocket, "type I");
+        readResponse(controlSocket);
 
         PasvCodeSocket pasvCodeSocket = pasv();
         if (pasvCodeSocket.dataSocket == null)
             return pasvCodeSocket.replyCode;
 
-        sendCommand(controlOut, "stor " + filePath);
+        sendCommand(controlSocket, "stor " + filePath);
 
         OutputStream os = pasvCodeSocket.dataSocket.getOutputStream();
         for (char c : data)
             os.write(c);
         os.flush();
-        os.close();
+//        os.close();
 
-        System.out.println("first code = " + readReply(controlIn));   // the first code
+        String response = readResponse(controlSocket); // the first code
+        if (!(response.substring(0, 3).equals("125") || response.substring(0, 3).equals("150"))) {
+            return response.substring(0, 3);
+        }
 
-        return readReply(controlIn).substring(0, 3);
+        return readResponse(controlSocket).substring(0, 3); // the second code
     }
 
-    private void sendCommand(BufferedWriter out, String command) throws IOException {
-        out.write(command);
-        out.newLine();
-        out.flush();
+    private void sendCommand(Socket socket, String command) throws IOException {
+        BufferedWriter bf = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        bf.write(command);
+        bf.newLine();
+        bf.flush();
     }
 
-    private String readReply(BufferedReader in) throws IOException {
+    private String readResponse(Socket socket) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String line = "1234";
         StringBuilder reply = new StringBuilder();
         while (!line.substring(3, 4).equals(" ")) {
@@ -130,8 +139,8 @@ public class FTPClient {
     }
 
     private PasvCodeSocket pasv() throws IOException {
-        sendCommand(controlOut, "pasv");
-        String reply = readReply(controlIn);
+        sendCommand(controlSocket, "pasv");
+        String reply = readResponse(controlSocket);
         String code = reply.substring(0, 3);
         if (!code.equals("227"))
             return new PasvCodeSocket(code, null);

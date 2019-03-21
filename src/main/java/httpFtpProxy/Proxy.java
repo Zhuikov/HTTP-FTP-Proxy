@@ -34,6 +34,11 @@ public class Proxy {
         private String path = null;
         private String hostName = null;
         private String login = null;
+        private String password = null;
+        private ArrayList<Character> body = null;
+        private String param = null;
+        private String ftpCommand = null;
+        private boolean file = false;
 
         public String getLogin() {
             return login;
@@ -50,9 +55,6 @@ public class Proxy {
         public void setPassword(String password) {
             this.password = password;
         }
-
-        private String password = null;
-        private ArrayList<Character> body = null;
 
         public Method getMethod() {
             return method;
@@ -78,12 +80,36 @@ public class Proxy {
             this.hostName = hostName;
         }
 
+        public String getParam() {
+            return param;
+        }
+
+        public void setParam(String param) {
+            this.param = param;
+        }
+
         public ArrayList<Character> getBody() {
             return body;
         }
 
         public void setBody(ArrayList<Character> body) {
             this.body = body;
+        }
+
+        public String getFtpCommand() {
+            return ftpCommand;
+        }
+
+        public void setFtpCommand(String ftpCommand) {
+            this.ftpCommand = ftpCommand;
+        }
+
+        public boolean isFile() {
+            return file;
+        }
+
+        public void setFile(boolean file) {
+            this.file = file;
         }
     }
 
@@ -113,35 +139,51 @@ public class Proxy {
 
         listeningSocket = new ServerSocket(port);
 
-        clientSocket = listeningSocket.accept();
-        HTTPRequest httpRequest = httpHandler.receiveRequest(clientSocket);
+        while (true) {
+            clientSocket = listeningSocket.accept();
+            HTTPRequest httpRequest = httpHandler.receiveRequest(clientSocket);
 
-        System.out.println("Method = " + httpRequest.getMethod() +
-                "\nHost = " + httpRequest.getHostName() +
-                "\nPath = " + httpRequest.getPath() +
-                "\nLogin = " + httpRequest.getLogin() +
-                "\nPass = " + httpRequest.getPassword() +
-                "\nBody = " + httpRequest.getBody());
+            System.out.println("------Method = " + httpRequest.getMethod() +
+                    "\nHost = " + httpRequest.getHostName() +
+                    "\nPath = " + httpRequest.getPath() +
+                    "\nLogin = " + httpRequest.getLogin() +
+                    "\nPass = " + httpRequest.getPassword() +
+                    "\nFile = " + httpRequest.isFile() +
+                    "\nFtp command = " + httpRequest.getFtpCommand() +
+                    "\nParam = " + httpRequest.getParam() +
+                    "\nBody = " + httpRequest.getBody());
 
-        //todo проверить конект
-        System.out.println("connect = " + ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/'))));
-        //todo проверить логин
-        System.out.println("auth = " + ftpClient.auth(httpRequest.login, httpRequest.password));
+            //todo проверить коннект
+            // отправить 500, если вернулся плохой код ответа
+            System.out.println("connect = " + ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/'))));
+            //todo проверить логин
+            // отправить 400, если все плохо
+            System.out.println("auth = " + ftpClient.auth(httpRequest.login, httpRequest.password));
 
-        DataAndCode getResponse;
-        String putResponse;
-        switch (httpRequest.getMethod()) {
-            case GET: {
-                getResponse = processRequestGET(httpRequest);
-                System.out.println("ftp response GET:\n\tcode = " + getResponse.code);
-                sendResponseGET(clientSocket, getResponse);
+            DataAndCode response;
+            String putResponse;
+
+            if (httpRequest.isFile()) {
+                switch (httpRequest.getMethod()) {
+                    case GET: {
+                        response = processRequestGET(httpRequest);
+                        sendResponse(clientSocket, response);
+                    }
+                    case PUT: {
+                        putResponse = processRequestPUT(httpRequest);
+                    }
+                }
+            } else {
+                if (httpRequest.getFtpCommand().equals("pwd")) {
+                    response = ftpClient.pwd();
+                    sendResponse(clientSocket, response);
+                } else if (httpRequest.getFtpCommand().equals("cwd")) {
+                    String cwdResponseCode = ftpClient.cwd(httpRequest.getParam());
+                    sendResponse(clientSocket, cwdResponseCode);
+                }
             }
-            case PUT: {
-                putResponse = processRequestPUT(httpRequest);
-            }
+
         }
-
-//        clientSocket.close();
 
     }
 
@@ -157,11 +199,16 @@ public class Proxy {
         return dataAndCode;
     }
 
-    private void sendResponseGET(Socket socket, DataAndCode dataAndCode) throws IOException {
+    private void sendResponse(Socket socket, String code) throws IOException {
+        OutputStream os = socket.getOutputStream();
+        os.write(("HTTP/1.1 200 Ok\nContent-Length: " + code.length() +'\n' + '\n' + code.length()).getBytes());
+    }
+
+    private void sendResponse(Socket socket, DataAndCode dataAndCode) throws IOException {
         OutputStream os = socket.getOutputStream();
         os.write(("HTTP/1.1 200 Ok\nContent-Length: " + dataAndCode.data.size() + '\n' + '\n').getBytes());
         if (dataAndCode.data.size() != 0) {
-            os.write('\n');
+//            os.write('\n');
             for (char c : dataAndCode.data) {
                 os.write(c);
             }
