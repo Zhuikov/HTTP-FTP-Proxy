@@ -142,6 +142,7 @@ public class Proxy {
         while (true) {
             clientSocket = listeningSocket.accept();
             HTTPRequest httpRequest = httpHandler.receiveRequest(clientSocket);
+            // todo может быть добавить метод валидации пакета
 
             System.out.println("------Method = " + httpRequest.getMethod() +
                     "\nHost = " + httpRequest.getHostName() +
@@ -153,12 +154,19 @@ public class Proxy {
                     "\nParam = " + httpRequest.getParam() +
                     "\nBody = " + httpRequest.getBody());
 
-            //todo проверить коннект
-            // отправить 500, если вернулся плохой код ответа
-            System.out.println("connect = " + ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/'))));
-            //todo проверить логин
-            // отправить 400, если все плохо
-            System.out.println("auth = " + ftpClient.auth(httpRequest.login, httpRequest.password));
+            if (!ftpClient.isConnected()) {
+                String connectResponse = ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
+                if (!connectResponse.equals("220")) {
+                    sendResponse(clientSocket, "500", "Connection error");
+                    continue;
+                }
+            }
+
+            String authResponse = ftpClient.auth(httpRequest.login, httpRequest.password);
+            if (!authResponse.equals("230")) {
+                sendResponse(clientSocket, "400", "Authentication error");
+                continue;
+            }
 
             DataAndCode response;
             String putResponse;
@@ -167,7 +175,10 @@ public class Proxy {
                 switch (httpRequest.getMethod()) {
                     case GET: {
                         response = processRequestGET(httpRequest);
+                        System.out.println("Process done!");
                         sendResponse(clientSocket, response);
+                        System.out.println("GET sent!");
+                        break;
                     }
                     case PUT: {
                         putResponse = processRequestPUT(httpRequest);
@@ -176,15 +187,19 @@ public class Proxy {
             } else {
                 if (httpRequest.getFtpCommand().equals("pwd")) {
                     response = ftpClient.pwd();
-                    sendResponse(clientSocket, response);
+                    if (response.getCode().equals("257"))
+                        sendResponse(clientSocket, response);
+                    else
+                        sendResponse(clientSocket, "500", "Cannot execute command");
                 } else if (httpRequest.getFtpCommand().equals("cwd")) {
                     String cwdResponseCode = ftpClient.cwd(httpRequest.getParam());
-                    sendResponse(clientSocket, cwdResponseCode);
+                    if (cwdResponseCode.equals("250"))
+                        sendResponse(clientSocket, "200", "Ok");
+                    else
+                        sendResponse(clientSocket, "500", "Cannot change directory");
                 }
             }
-
         }
-
     }
 
     private DataAndCode processRequestGET(HTTPRequest httpRequest) throws IOException {
@@ -192,23 +207,24 @@ public class Proxy {
         DataAndCode dataAndCode;
         String path = httpRequest.getPath();
         if (path.charAt(path.length() - 1) == '/')
-            dataAndCode = ftpClient.sendDataCommand("list", path.substring(path.indexOf('/')), 'A');
+            dataAndCode = ftpClient.sendDataCommand("list", path.substring(path.indexOf('/')),
+                    httpRequest.getParam().charAt(0));
         else
-            dataAndCode = ftpClient.sendDataCommand("retr", path.substring(path.indexOf('/')), 'I');
+            dataAndCode = ftpClient.sendDataCommand("retr", path.substring(path.indexOf('/')),
+                    httpRequest.getParam().charAt(0));
 
         return dataAndCode;
     }
 
-    private void sendResponse(Socket socket, String code) throws IOException {
+    private void sendResponse(Socket socket, String code, String message) throws IOException {
         OutputStream os = socket.getOutputStream();
-        os.write(("HTTP/1.1 200 Ok\nContent-Length: " + code.length() +'\n' + '\n' + code.length()).getBytes());
+        os.write(("HTTP/1.1 " + code + ' ' + message + "\nContent-Length: 0" +"\n\n").getBytes());
     }
 
     private void sendResponse(Socket socket, DataAndCode dataAndCode) throws IOException {
         OutputStream os = socket.getOutputStream();
-        os.write(("HTTP/1.1 200 Ok\nContent-Length: " + dataAndCode.data.size() + '\n' + '\n').getBytes());
+        os.write(("HTTP/1.1 200 Ok\nContent-Length: " + dataAndCode.data.size() + "\n\n").getBytes());
         if (dataAndCode.data.size() != 0) {
-//            os.write('\n');
             for (char c : dataAndCode.data) {
                 os.write(c);
             }
@@ -226,7 +242,7 @@ public class Proxy {
 //    }
 
     // ftp testing
-    public static void main1(String[] args) throws IOException {
+    public static void main2(String[] args) throws IOException {
 
         FTPClient ftpClient = new FTPClient();
 
@@ -258,6 +274,19 @@ public class Proxy {
             fileOut.write(b);
         }
         fileOut.close();
+    }
+
+    public static void main1(String[] args) throws IOException {
+        FTPClient ftpClient = new FTPClient();
+
+        ftpClient.connect("ftp.funet.fi");
+        ftpClient.auth("anonymous", "pass");
+        DataAndCode response = ftpClient.sendDataCommand("list", "/", 'A');
+        System.out.println(response.code);
+        for (char c : response.getData()) {
+            System.out.print(c);
+        }
+
     }
 
 }

@@ -28,37 +28,37 @@ public class HTTPHandler {
         if (firstRequestLine[0].equals("PUT")) httpRequest.setMethod(Proxy.Method.PUT);
         else if (firstRequestLine[0].equals("GET")) httpRequest.setMethod(Proxy.Method.GET);
 
-        // process path (ftp.sunet.su[/file]/path/to/file
         int firstSlash = firstRequestLine[1].indexOf('/');
+
+        // process path (ftp.sunet.su[/file]/path/to/file[?param="text"]
         // ip = "ftp.sunet.su"
         String ip = firstRequestLine[1].substring(0, firstSlash);
-        // path = "[/file]/path/to/file"
-        String path = firstRequestLine[1].substring(firstSlash);
+        String afterSlash = firstRequestLine[1].substring(firstSlash);
 
-        // can process just 1 param
-        int questionSign = firstRequestLine[1].indexOf('?');
-        if (questionSign != -1)
-            httpRequest.setParam(path.substring(path.indexOf('"') + 1, path.lastIndexOf('"')));
-
-        // ip/file/path/to/file
-        if (path.length() >= fileCommand.length() &&
-                path.substring(0, fileCommand.length()).equals(fileCommand)) {
+        if (afterSlash.length() > fileCommand.length() &&
+                afterSlash.substring(0, fileCommand.length()).equals(fileCommand)) {
             httpRequest.setFile(true);
-            httpRequest.setPath(ip + path.substring(fileCommand.length()));
-        } else { // ip/pwd   ip/cwd?dir="/path/to/dir/"
-            httpRequest.setFile(false);
+            afterSlash = afterSlash.substring(fileCommand.length());
+        }
+
+        int questionSign = afterSlash.indexOf('?');
+        if (questionSign != -1) {
+            httpRequest.setParam(afterSlash.substring(afterSlash.indexOf('\"') + 1, afterSlash.lastIndexOf('\"')));
+            afterSlash = afterSlash.substring(0, questionSign);
+        }
+
+        if (httpRequest.isFile()) {
+            httpRequest.setPath(ip + afterSlash);
+        } else {
             httpRequest.setPath(ip + '/');
-            if (questionSign == -1) { // ip/pwd
-                httpRequest.setFtpCommand(path.substring(1));
-            } else {
-                httpRequest.setFtpCommand(path.substring(1, questionSign));
-            }
+            httpRequest.setFtpCommand(afterSlash.substring(1));
         }
 
         // process the second request line
         String[] secondRequestLine = requestLines[1].split(" ");
         httpRequest.setHostName(secondRequestLine[1]);
 
+        // process authorization line
         for (String s : requestLines) {
             if (s.length() > authorizationString.length() &&
                     s.substring(0, authorizationString.length()).equals(authorizationString)) {
@@ -68,7 +68,6 @@ public class HTTPHandler {
                 httpRequest.setPassword(loginPass[1]);
             }
         }
-
 
         if (httpRequest.getMethod() == Proxy.Method.PUT) {
             // дочитывает из сокета строку после заголовков
@@ -93,7 +92,7 @@ public class HTTPHandler {
         return request.toString();
     }
 
-    // todo can make error
+    // todo can make error when reading file
     private ArrayList<Character> readRequestBody(Socket socket) throws IOException {
         BufferedReader bf = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String bodyString = bf.readLine();

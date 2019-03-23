@@ -27,6 +27,12 @@ public class FTPClient {
         return readResponse(controlSocket).substring(0, 3);
     }
 
+    public boolean isConnected() {
+        if (controlSocket == null)
+            return false;
+        return controlSocket.isConnected();
+    }
+
     public void disconnect() throws IOException {
         controlSocket.close();
     }
@@ -49,12 +55,14 @@ public class FTPClient {
             dataAndCode.setCode(response);
             return dataAndCode;
         }
+        System.out.println("sendDataCommand: type done!");
 
         PasvCodeSocket pasvCodeSocket = pasv();
         if (pasvCodeSocket.dataSocket == null) {
             dataAndCode.setCode(pasvCodeSocket.replyCode.substring(0, 3));
             return dataAndCode;
         }
+        System.out.println("sendDataCommand: pasv done!");
 
         sendCommand(controlSocket, command + " " + filePath);
         response = readResponse(controlSocket).substring(0, 3); // read the first code
@@ -62,11 +70,15 @@ public class FTPClient {
             dataAndCode.setCode(response.substring(0, 3));
             return dataAndCode;
         }
+        System.out.println("sendDataCommand: read 1 response");
+        System.out.println("sendDataCommand: before consumePasvData");
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
+        System.out.println("sendDataCommand: after consumePasvData");
         dataAndCode.setData(input);
         dataAndCode.setCode(readResponse(controlSocket).substring(0, 3)); // read the second code
 
+        System.out.println("sendDataCommand: return");
         return dataAndCode;
     }
 
@@ -127,15 +139,37 @@ public class FTPClient {
     }
 
     private String readResponse(Socket socket) throws IOException {
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        String line = "1234";
+        System.out.println("readResponse: begin");
+        InputStream in = socket.getInputStream();
+//        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        String line;
         StringBuilder reply = new StringBuilder();
-        while (!line.substring(3, 4).equals(" ")) {
-            line = in.readLine();
+        do {
+            line = readString(in);
             reply.append(line);
+        } while (line.charAt(3) != ' ');
+//        while (line.charAt(3) != ' ') {
+//            line = in.readLine();
+////            System.out.println("readResponse: line: " + line);
+//            reply.append(line);
+//        }
+
+        System.out.println("readResponse: end");
+        return reply.toString();
+    }
+
+    static private String readString(InputStream is) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        char value;
+
+        while (true) {
+//            System.out.println("\treadString");
+            value = (char)is.read();
+            if (value == '\n') break;
+            sb.append(value);
         }
 
-        return reply.toString();
+        return sb.toString();
     }
 
     private PasvCodeSocket pasv() throws IOException {
