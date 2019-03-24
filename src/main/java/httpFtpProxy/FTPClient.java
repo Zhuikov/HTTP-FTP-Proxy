@@ -33,6 +33,11 @@ public class FTPClient {
         return controlSocket.isConnected();
     }
 
+    public boolean isAuth() throws IOException {
+        Proxy.DataAndCode response = pwd();
+        return !response.getCode().equals("530");
+    }
+
     public void disconnect() throws IOException {
         controlSocket.close();
     }
@@ -55,14 +60,14 @@ public class FTPClient {
             dataAndCode.setCode(response);
             return dataAndCode;
         }
-        System.out.println("sendDataCommand: type done!");
+//        System.out.println("sendDataCommand: type done!");
 
         PasvCodeSocket pasvCodeSocket = pasv();
         if (pasvCodeSocket.dataSocket == null) {
             dataAndCode.setCode(pasvCodeSocket.replyCode.substring(0, 3));
             return dataAndCode;
         }
-        System.out.println("sendDataCommand: pasv done!");
+//        System.out.println("sendDataCommand: pasv done!");
 
         sendCommand(controlSocket, command + " " + filePath);
         response = readResponse(controlSocket).substring(0, 3); // read the first code
@@ -70,15 +75,15 @@ public class FTPClient {
             dataAndCode.setCode(response.substring(0, 3));
             return dataAndCode;
         }
-        System.out.println("sendDataCommand: read 1 response");
-        System.out.println("sendDataCommand: before consumePasvData");
+//        System.out.println("sendDataCommand: read 1 response");
+//        System.out.println("sendDataCommand: before consumePasvData");
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
-        System.out.println("sendDataCommand: after consumePasvData");
+//        System.out.println("sendDataCommand: after consumePasvData");
         dataAndCode.setData(input);
         dataAndCode.setCode(readResponse(controlSocket).substring(0, 3)); // read the second code
 
-        System.out.println("sendDataCommand: return");
+//        System.out.println("sendDataCommand: return");
         return dataAndCode;
     }
 
@@ -139,7 +144,7 @@ public class FTPClient {
     }
 
     private String readResponse(Socket socket) throws IOException {
-        System.out.println("readResponse: begin");
+//        System.out.println("readResponse: begin");
         InputStream in = socket.getInputStream();
 //        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String line;
@@ -154,7 +159,7 @@ public class FTPClient {
 //            reply.append(line);
 //        }
 
-        System.out.println("readResponse: end");
+//        System.out.println("readResponse: end");
         return reply.toString();
     }
 

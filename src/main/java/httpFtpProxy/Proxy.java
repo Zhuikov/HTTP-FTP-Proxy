@@ -162,10 +162,12 @@ public class Proxy {
                 }
             }
 
-            String authResponse = ftpClient.auth(httpRequest.login, httpRequest.password);
-            if (!authResponse.equals("230")) {
-                sendResponse(clientSocket, "400", "Authentication error");
-                continue;
+            if (!ftpClient.isAuth()) {
+                String authResponse = ftpClient.auth(httpRequest.login, httpRequest.password);
+                if (!authResponse.equals("230")) {
+                    sendResponse(clientSocket, "400", "Authentication error");
+                    continue;
+                }
             }
 
             DataAndCode response;
@@ -176,6 +178,7 @@ public class Proxy {
                     case GET: {
                         response = processRequestGET(httpRequest);
                         System.out.println("Process done!");
+                        System.out.println("get request code = " + response.getCode());
                         sendResponse(clientSocket, response);
                         System.out.println("GET sent!");
                         break;
@@ -187,14 +190,18 @@ public class Proxy {
             } else {
                 if (httpRequest.getFtpCommand().equals("pwd")) {
                     response = ftpClient.pwd();
-                    if (response.getCode().equals("257"))
+                    if (response.getCode().equals("257")) {
                         sendResponse(clientSocket, response);
+                        System.out.println("pwd request code = " + response.getCode() + "\nresponse sent");
+                    }
                     else
                         sendResponse(clientSocket, "500", "Cannot execute command");
                 } else if (httpRequest.getFtpCommand().equals("cwd")) {
                     String cwdResponseCode = ftpClient.cwd(httpRequest.getParam());
-                    if (cwdResponseCode.equals("250"))
+                    if (cwdResponseCode.equals("250")) {
                         sendResponse(clientSocket, "200", "Ok");
+                        System.out.println("cwd request code = " + cwdResponseCode + "\nresponse sent");
+                    }
                     else
                         sendResponse(clientSocket, "500", "Cannot change directory");
                 }
