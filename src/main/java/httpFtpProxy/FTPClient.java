@@ -111,9 +111,9 @@ public class FTPClient {
     }
 
     // filePath -- place on server
-    public String stor(ArrayList<Character> data, String filePath) throws IOException {
+    public String stor(ArrayList<Character> data, String filePath, char type) throws IOException {
 
-        sendCommand(controlSocket, "type I");
+        sendCommand(controlSocket, "type " + type);
         readResponse(controlSocket);
 
         PasvCodeSocket pasvCodeSocket = pasv();
@@ -126,7 +126,7 @@ public class FTPClient {
         for (char c : data)
             os.write(c);
         os.flush();
-//        os.close();
+        os.close();
 
         String response = readResponse(controlSocket); // the first code
         if (!(response.substring(0, 3).equals("125") || response.substring(0, 3).equals("150"))) {
@@ -137,6 +137,7 @@ public class FTPClient {
     }
 
     private void sendCommand(Socket socket, String command) throws IOException {
+
         BufferedWriter bf = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         bf.write(command);
         bf.newLine();
@@ -144,22 +145,15 @@ public class FTPClient {
     }
 
     private String readResponse(Socket socket) throws IOException {
-//        System.out.println("readResponse: begin");
+
         InputStream in = socket.getInputStream();
-//        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String line;
         StringBuilder reply = new StringBuilder();
         do {
             line = readString(in);
             reply.append(line);
         } while (line.charAt(3) != ' ');
-//        while (line.charAt(3) != ' ') {
-//            line = in.readLine();
-////            System.out.println("readResponse: line: " + line);
-//            reply.append(line);
-//        }
 
-//        System.out.println("readResponse: end");
         return reply.toString();
     }
 

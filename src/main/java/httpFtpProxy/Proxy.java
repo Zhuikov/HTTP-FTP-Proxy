@@ -177,14 +177,16 @@ public class Proxy {
                 switch (httpRequest.getMethod()) {
                     case GET: {
                         response = processRequestGET(httpRequest);
-                        System.out.println("Process done!");
-                        System.out.println("get request code = " + response.getCode());
                         sendResponse(clientSocket, response);
-                        System.out.println("GET sent!");
                         break;
                     }
                     case PUT: {
                         putResponse = processRequestPUT(httpRequest);
+                        if (putResponse.equals("226") || putResponse.equals("250")) {
+                            sendResponse(clientSocket, "200", "Ok");
+                        } else {
+                            sendResponse(clientSocket, "500", "Cannot upload file");
+                        }
                     }
                 }
             } else {
@@ -238,15 +240,10 @@ public class Proxy {
         }
     }
 
-    private String processRequestPUT(HTTPRequest httpRequest) {
+    private String processRequestPUT(HTTPRequest httpRequest) throws IOException {
 
-        return "150 ?";
+        return ftpClient.stor(httpRequest.body, httpRequest.path, httpRequest.getParam().charAt(0));
     }
-
-//    private String makeResponseHeaders(String code, int contentLength) {
-//        String responseHeader = "HTTP/1.1 200 Ok\nContent-Length: ";
-//
-//    }
 
     // ftp testing
     public static void main2(String[] args) throws IOException {
@@ -264,7 +261,7 @@ public class Proxy {
             file.add((char)i);
         }
         fileInputStream.close();
-        System.out.println("stor = " + ftpClient.stor(file, "/ftp/RPN"));
+        System.out.println("stor = " + ftpClient.stor(file, "/ftp/RPN", 'I'));
 
         DataAndCode dataAndCode = ftpClient.sendDataCommand("list","/ftp/", 'A');
         System.out.println("list = " + dataAndCode.getCode());
@@ -276,7 +273,7 @@ public class Proxy {
         System.out.println("retr = " + dataAndCode.getCode());
 
         // save retr file test:
-        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/downloadedRPN1.jpg");
+        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/proxyTest/downloadedRPN1.jpg");
         for (char b : dataAndCode.getData()) {
             fileOut.write(b);
         }
