@@ -3,6 +3,7 @@ package httpFtpProxy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.List;
 public class HTTPHandler {
 
     private static final String authorizationString = "Authorization: Basic ";
+    private static final String contentLengthString = "Content-Length: ";
     private static final String fileCommand = "/file";
 
     public HTTPHandler() {}
@@ -20,13 +22,32 @@ public class HTTPHandler {
     public Proxy.HTTPRequest receiveRequest(Socket socket) throws IOException {
 
         Proxy.HTTPRequest httpRequest = new Proxy.HTTPRequest();
-        String requestHeaders = readRequestHeaders(socket);
-        String[] requestLines = requestHeaders.split("\n");
+        InputStream is = socket.getInputStream();
 
-        // process method (GET/PUT)
-        String[] firstRequestLine = requestLines[0].split(" ");
-        if (firstRequestLine[0].equals("PUT")) httpRequest.setMethod(Proxy.Method.PUT);
-        else if (firstRequestLine[0].equals("GET")) httpRequest.setMethod(Proxy.Method.GET);
+        String line;
+        ArrayList<String> headers = new ArrayList<>();
+        while (true) {
+            line = readString(is);
+            if (line.isEmpty()) break;
+            headers.add(line);
+        }
+
+//        String requestHeaders = readRequestHeaders(socket);
+//        String[] requestLines = requestHeaders.split("\n");
+
+        // process method (GET/PUT/DELETE)
+        String[] firstRequestLine = headers.get(0).split(" ");
+        switch (firstRequestLine[0]) {
+            case "PUT":
+                httpRequest.setMethod(Proxy.Method.PUT);
+                break;
+            case "GET":
+                httpRequest.setMethod(Proxy.Method.GET);
+                break;
+            case "DELETE":
+                httpRequest.setMethod(Proxy.Method.DELETE);
+                break;
+        }
 
         int firstSlash = firstRequestLine[1].indexOf('/');
 
@@ -55,11 +76,11 @@ public class HTTPHandler {
         }
 
         // process the second request line
-        String[] secondRequestLine = requestLines[1].split(" ");
+        String[] secondRequestLine = headers.get(1).split(" ");
         httpRequest.setHostName(secondRequestLine[1]);
 
         // process authorization line
-        for (String s : requestLines) {
+        for (String s : headers) {
             if (s.length() > authorizationString.length() &&
                     s.substring(0, authorizationString.length()).equals(authorizationString)) {
                 String decodedLoginPass = new String(Base64.getDecoder().decode(s.substring(authorizationString.length())));
@@ -67,11 +88,22 @@ public class HTTPHandler {
                 httpRequest.setLogin(loginPass[0]);
                 httpRequest.setPassword(loginPass[1]);
             }
+
         }
 
         if (httpRequest.getMethod() == Proxy.Method.PUT) {
+            int bodyLength = 0;
+            for (String s : headers) {
+                if (s.length() > contentLengthString.length() &&
+                        s.substring(0, contentLengthString.length()).equals(contentLengthString)) {
+                    String[] contentLen = s.split(" ");
+                    bodyLength = Integer.parseInt(contentLen[1]);
+                }
+            }
             // дочитывает из сокета строку после заголовков
-            httpRequest.setBody(readRequestBody(socket));
+            System.out.println("Body length = " + bodyLength);
+            httpRequest.setBody(readRequestBody(socket, bodyLength));
+            System.out.println("Read = " + httpRequest.getBody().size());
         }
 
         return httpRequest;
@@ -93,14 +125,27 @@ public class HTTPHandler {
     }
 
     // todo can make error when reading file
-    private ArrayList<Character> readRequestBody(Socket socket) throws IOException {
-        BufferedReader bf = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        String bodyString = bf.readLine();
-        bf.close();
-
-        List body = Arrays.asList(bodyString.toCharArray());
-
-        return new ArrayList<Character>(body);
+    private ArrayList<Character> readRequestBody(Socket socket, int bodyLength) throws IOException {
+        InputStream is = socket.getInputStream();
+        ArrayList<Character> body = new ArrayList<>(bodyLength);
+        int readBytes = 0;
+        while (readBytes < bodyLength) {
+            body.add((char) is.read());
+            readBytes++;
+        }
+        return body;
     }
 
+    private String readString(InputStream is) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        char value;
+
+        while (true) {
+            value = (char)is.read();
+            if (value == '\n') break;
+            sb.append(value);
+        }
+
+        return sb.toString();
+    }
 }

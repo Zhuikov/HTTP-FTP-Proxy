@@ -113,11 +113,21 @@ public class Proxy {
         }
     }
 
-    public enum Method { GET, PUT };
+    public enum Method { GET, PUT, DELETE };
 
     private ServerSocket listeningSocket;
     private Socket clientSocket;
     private FTPClient ftpClient = new FTPClient();
+
+    public static void main4(String[] args) throws IOException {
+
+        ServerSocket serverSocket = new ServerSocket(7500);
+        Socket client = serverSocket.accept();
+        InputStream is = client.getInputStream();
+
+//        while ()
+
+    }
 
     public static void main(String[] args) {
 
@@ -151,8 +161,8 @@ public class Proxy {
                     "\nPass = " + httpRequest.getPassword() +
                     "\nFile = " + httpRequest.isFile() +
                     "\nFtp command = " + httpRequest.getFtpCommand() +
-                    "\nParam = " + httpRequest.getParam() +
-                    "\nBody = " + httpRequest.getBody());
+                    "\nParam = " + httpRequest.getParam());
+//                    "\nBody = " + httpRequest.body);
 
             if (!ftpClient.isConnected()) {
                 String connectResponse = ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
@@ -172,6 +182,7 @@ public class Proxy {
 
             DataAndCode response;
             String putResponse;
+            String deleteResponse;
 
             if (httpRequest.isFile()) {
                 switch (httpRequest.getMethod()) {
@@ -186,6 +197,15 @@ public class Proxy {
                             sendResponse(clientSocket, "200", "Ok");
                         } else {
                             sendResponse(clientSocket, "500", "Cannot upload file");
+                        }
+                        break;
+                    }
+                    case DELETE: {
+                        deleteResponse = processRequestDelete(httpRequest);
+                        if (deleteResponse.equals("250")) {
+                            sendResponse(clientSocket, "200", "Ok");
+                        } else {
+                            sendResponse(clientSocket, "500", "Cannot delete file");
                         }
                     }
                 }
@@ -242,7 +262,14 @@ public class Proxy {
 
     private String processRequestPUT(HTTPRequest httpRequest) throws IOException {
 
-        return ftpClient.stor(httpRequest.body, httpRequest.path, httpRequest.getParam().charAt(0));
+        String dir = httpRequest.path.substring(httpRequest.path.indexOf('/'));
+        return ftpClient.stor(httpRequest.body, dir, httpRequest.getParam().charAt(0));
+    }
+
+    private String processRequestDelete(HTTPRequest httpRequest) throws IOException {
+
+        String dir = httpRequest.path.substring(httpRequest.path.indexOf('/'));
+        return ftpClient.dele(dir);
     }
 
     // ftp testing
@@ -269,6 +296,7 @@ public class Proxy {
             System.out.print(c);
         }
 
+        // retr
         dataAndCode = ftpClient.sendDataCommand("retr","/ftp/RPN", 'I');
         System.out.println("retr = " + dataAndCode.getCode());
 
@@ -278,19 +306,14 @@ public class Proxy {
             fileOut.write(b);
         }
         fileOut.close();
-    }
 
-    public static void main1(String[] args) throws IOException {
-        FTPClient ftpClient = new FTPClient();
-
-        ftpClient.connect("ftp.funet.fi");
-        ftpClient.auth("anonymous", "pass");
-        DataAndCode response = ftpClient.sendDataCommand("list", "/", 'A');
-        System.out.println(response.code);
-        for (char c : response.getData()) {
+        // delete and list
+        System.out.println("Dele = " + ftpClient.dele("/ftp/RPN"));
+        dataAndCode = ftpClient.sendDataCommand("list","/ftp/", 'A');
+        System.out.println("list = " + dataAndCode.getCode());
+        for (char c : dataAndCode.getData()) {
             System.out.print(c);
         }
-
     }
 
 }

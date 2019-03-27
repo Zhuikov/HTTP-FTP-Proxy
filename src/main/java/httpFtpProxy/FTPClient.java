@@ -60,14 +60,12 @@ public class FTPClient {
             dataAndCode.setCode(response);
             return dataAndCode;
         }
-//        System.out.println("sendDataCommand: type done!");
 
         PasvCodeSocket pasvCodeSocket = pasv();
         if (pasvCodeSocket.dataSocket == null) {
             dataAndCode.setCode(pasvCodeSocket.replyCode.substring(0, 3));
             return dataAndCode;
         }
-//        System.out.println("sendDataCommand: pasv done!");
 
         sendCommand(controlSocket, command + " " + filePath);
         response = readResponse(controlSocket).substring(0, 3); // read the first code
@@ -75,15 +73,11 @@ public class FTPClient {
             dataAndCode.setCode(response.substring(0, 3));
             return dataAndCode;
         }
-//        System.out.println("sendDataCommand: read 1 response");
-//        System.out.println("sendDataCommand: before consumePasvData");
 
         ArrayList<Character> input = consumePasvData(pasvCodeSocket.dataSocket);
-//        System.out.println("sendDataCommand: after consumePasvData");
         dataAndCode.setData(input);
         dataAndCode.setCode(readResponse(controlSocket).substring(0, 3)); // read the second code
 
-//        System.out.println("sendDataCommand: return");
         return dataAndCode;
     }
 
@@ -134,6 +128,11 @@ public class FTPClient {
         }
 
         return readResponse(controlSocket).substring(0, 3); // the second code
+    }
+
+    public String dele(String filePath) throws IOException {
+        sendCommand(controlSocket, "dele " + filePath);
+        return readResponse(controlSocket).substring(0, 3);
     }
 
     private void sendCommand(Socket socket, String command) throws IOException {
