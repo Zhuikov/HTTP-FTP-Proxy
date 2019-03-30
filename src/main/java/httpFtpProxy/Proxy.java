@@ -119,16 +119,6 @@ public class Proxy {
     private Socket clientSocket;
     private FTPClient ftpClient = new FTPClient();
 
-    public static void main4(String[] args) throws IOException {
-
-        ServerSocket serverSocket = new ServerSocket(7500);
-        Socket client = serverSocket.accept();
-        InputStream is = client.getInputStream();
-
-//        while ()
-
-    }
-
     public static void main(String[] args) {
 
         Proxy proxy = new Proxy();
@@ -138,7 +128,6 @@ public class Proxy {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     public Proxy() {}
@@ -162,7 +151,6 @@ public class Proxy {
                     "\nFile = " + httpRequest.isFile() +
                     "\nFtp command = " + httpRequest.getFtpCommand() +
                     "\nParam = " + httpRequest.getParam());
-//                    "\nBody = " + httpRequest.body);
 
             if (!ftpClient.isConnected()) {
                 String connectResponse = ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
@@ -172,27 +160,25 @@ public class Proxy {
                 }
             }
 
-            if (!ftpClient.isAuth()) {
+            if (!ftpClient.isAuth() || (httpRequest.getFtpCommand() != null &&
+                    httpRequest.getFtpCommand().equals(FTPClient.authCommand))) {
                 String authResponse = ftpClient.auth(httpRequest.login, httpRequest.password);
+                System.out.println("authResponse = " + authResponse);
                 if (!authResponse.equals("230")) {
                     sendResponse(clientSocket, "400", "Authentication error");
                     continue;
                 }
             }
 
-            DataAndCode response;
-            String putResponse;
-            String deleteResponse;
-
             if (httpRequest.isFile()) {
                 switch (httpRequest.getMethod()) {
                     case GET: {
-                        response = processRequestGET(httpRequest);
+                        DataAndCode response = processRequestGET(httpRequest);
                         sendResponse(clientSocket, response);
                         break;
                     }
                     case PUT: {
-                        putResponse = processRequestPUT(httpRequest);
+                        String putResponse = processRequestPUT(httpRequest);
                         if (putResponse.equals("226") || putResponse.equals("250")) {
                             sendResponse(clientSocket, "200", "Ok");
                         } else {
@@ -201,7 +187,7 @@ public class Proxy {
                         break;
                     }
                     case DELETE: {
-                        deleteResponse = processRequestDelete(httpRequest);
+                        String deleteResponse = processRequestDelete(httpRequest);
                         if (deleteResponse.equals("250")) {
                             sendResponse(clientSocket, "200", "Ok");
                         } else {
@@ -210,22 +196,30 @@ public class Proxy {
                     }
                 }
             } else {
-                if (httpRequest.getFtpCommand().equals("pwd")) {
-                    response = ftpClient.pwd();
-                    if (response.getCode().equals("257")) {
-                        sendResponse(clientSocket, response);
-                        System.out.println("pwd request code = " + response.getCode() + "\nresponse sent");
-                    }
-                    else
-                        sendResponse(clientSocket, "500", "Cannot execute command");
-                } else if (httpRequest.getFtpCommand().equals("cwd")) {
-                    String cwdResponseCode = ftpClient.cwd(httpRequest.getParam());
-                    if (cwdResponseCode.equals("250")) {
-                        sendResponse(clientSocket, "200", "Ok");
-                        System.out.println("cwd request code = " + cwdResponseCode + "\nresponse sent");
-                    }
-                    else
-                        sendResponse(clientSocket, "500", "Cannot change directory");
+                switch (httpRequest.getFtpCommand()) {
+                    case FTPClient.pwdCommand:
+                        DataAndCode response = ftpClient.pwd();
+                        if (response.getCode().equals("257")) {
+                            sendResponse(clientSocket, response);
+                        } else
+                            sendResponse(clientSocket, "500", "Cannot execute command");
+                        break;
+                    case FTPClient.cwdCommand:
+                        String cwdResponseCode = ftpClient.cwd(httpRequest.getParam());
+                        if (cwdResponseCode.equals("250")) {
+                            sendResponse(clientSocket, "200", "Ok");
+                        } else
+                            sendResponse(clientSocket, "500", "Cannot change directory");
+                        break;
+                    case FTPClient.quitCommand:
+                        String quitResponseCode = ftpClient.disconnect();
+                        if (quitResponseCode.equals("221")) {
+                            sendResponse(clientSocket, "200", "Ok");
+                        } else
+                            sendResponse(clientSocket, "500", "Cannot disconnect user");
+                        break;
+                    default:
+                            sendResponse(clientSocket, "200", "Ok");
                 }
             }
         }

@@ -1,10 +1,7 @@
 package httpFtpProxy;
 
-
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -30,9 +27,6 @@ public class HTTPHandler {
             headers.add(line);
         }
 
-//        String requestHeaders = readRequestHeaders(socket);
-//        String[] requestLines = requestHeaders.split("\n");
-
         // process method (GET/PUT/DELETE)
         String[] firstRequestLine = headers.get(0).split(" ");
         switch (firstRequestLine[0]) {
@@ -49,7 +43,7 @@ public class HTTPHandler {
 
         int firstSlash = firstRequestLine[1].indexOf('/');
 
-        // process path (ftp.sunet.su[/file]/path/to/file[?param="text"]
+        // process path (ftp.sunet.su[/file]/path/to/file[?param="text"])
         // ip = "ftp.sunet.su"
         String ip = firstRequestLine[1].substring(0, firstSlash);
         String afterSlash = firstRequestLine[1].substring(firstSlash);
@@ -99,30 +93,12 @@ public class HTTPHandler {
                 }
             }
             // дочитывает из сокета строку после заголовков
-            System.out.println("Body length = " + bodyLength);
             httpRequest.setBody(readRequestBody(socket, bodyLength));
-            System.out.println("Read = " + httpRequest.getBody().size());
         }
 
         return httpRequest;
     }
 
-    private String readRequestHeaders(Socket socket) throws IOException {
-        BufferedReader bf = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        StringBuilder request = new StringBuilder();
-        String line;
-
-        while (!(line = bf.readLine()).isEmpty()) {
-            request
-                    .append(line)
-                    .append("\n");
-        }
-//        bf.close();
-
-        return request.toString();
-    }
-
-    // todo can make error when reading file
     private ArrayList<Character> readRequestBody(Socket socket, int bodyLength) throws IOException {
         InputStream is = socket.getInputStream();
         ArrayList<Character> body = new ArrayList<>(bodyLength);

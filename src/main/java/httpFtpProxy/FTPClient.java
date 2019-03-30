@@ -7,6 +7,15 @@ import java.util.ArrayList;
 
 public class FTPClient {
 
+    public static final String listCommand = "list";
+    public static final String retrCommand = "retr";
+    public static final String storCommand = "stor";
+    public static final String deleCommand = "dele";
+    public static final String cwdCommand  =  "cwd";
+    public static final String pwdCommand  =  "pwd";
+    public static final String authCommand = "auth";
+    public static final String quitCommand = "quit";
+
     private Socket controlSocket;
 
     private class PasvCodeSocket {
@@ -30,7 +39,7 @@ public class FTPClient {
     public boolean isConnected() {
         if (controlSocket == null)
             return false;
-        return controlSocket.isConnected();
+        return !controlSocket.isClosed();
     }
 
     public boolean isAuth() throws IOException {
@@ -38,8 +47,12 @@ public class FTPClient {
         return !response.getCode().equals("530");
     }
 
-    public void disconnect() throws IOException {
+    public String disconnect() throws IOException {
+        sendCommand(controlSocket, quitCommand);
+        String response = readResponse(controlSocket);
+
         controlSocket.close();
+        return response.substring(0, 3);
     }
 
     public String auth(String user, String pass) throws IOException {
@@ -84,7 +97,7 @@ public class FTPClient {
     public Proxy.DataAndCode pwd() throws IOException {
 
         Proxy.DataAndCode dataAndCode = new Proxy.DataAndCode();
-        sendCommand(controlSocket, "pwd");
+        sendCommand(controlSocket, pwdCommand);
 
         String response = readResponse(controlSocket);
         dataAndCode.setCode(response.substring(0, 3));
@@ -100,7 +113,7 @@ public class FTPClient {
     }
 
     public String cwd(String newDir) throws IOException {
-        sendCommand(controlSocket, "cwd " + newDir);
+        sendCommand(controlSocket, cwdCommand + " " + newDir);
         return readResponse(controlSocket).substring(0, 3);
     }
 
@@ -114,7 +127,7 @@ public class FTPClient {
         if (pasvCodeSocket.dataSocket == null)
             return pasvCodeSocket.replyCode;
 
-        sendCommand(controlSocket, "stor " + filePath);
+        sendCommand(controlSocket, storCommand + " " + filePath);
 
         OutputStream os = pasvCodeSocket.dataSocket.getOutputStream();
         for (char c : data)
@@ -131,7 +144,7 @@ public class FTPClient {
     }
 
     public String dele(String filePath) throws IOException {
-        sendCommand(controlSocket, "dele " + filePath);
+        sendCommand(controlSocket, deleCommand + " " + filePath);
         return readResponse(controlSocket).substring(0, 3);
     }
 

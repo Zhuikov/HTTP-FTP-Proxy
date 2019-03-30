@@ -16,7 +16,6 @@ public class FTPServer extends Thread {
     @Override
     public void run() {
         try {
-//            serverSocket = new ServerSocket(port);
             Socket clientSocket = serverSocket.accept();
             OutputStream os = clientSocket.getOutputStream();
             os.write(message.getBytes());
