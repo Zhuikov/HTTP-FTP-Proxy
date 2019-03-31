@@ -153,9 +153,14 @@ public class Proxy {
                     "\nParam = " + httpRequest.getParam());
 
             if (!ftpClient.isConnected()) {
-                String connectResponse = ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
-                if (!connectResponse.equals("220")) {
-                    sendResponse(clientSocket, "500", "Connection error");
+                try {
+                    String connectResponse = ftpClient.connect(httpRequest.path.substring(0, httpRequest.path.indexOf('/')));
+                    if (!connectResponse.equals("220")) {
+                        sendResponse(clientSocket, "500", "Connection error");
+                        continue;
+                    }
+                } catch (Exception e) {
+                    sendResponse(clientSocket, "500", e.getMessage());
                     continue;
                 }
             }
