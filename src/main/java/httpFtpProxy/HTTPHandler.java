@@ -1,5 +1,7 @@
 package httpFtpProxy;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
@@ -39,6 +41,8 @@ public class HTTPHandler {
             case "DELETE":
                 httpRequest.setMethod(Proxy.Method.DELETE);
                 break;
+            default:
+                return httpRequest;
         }
 
         int firstSlash = firstRequestLine[1].indexOf('/');

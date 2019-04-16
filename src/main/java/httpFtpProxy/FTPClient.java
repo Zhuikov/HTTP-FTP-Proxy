@@ -174,7 +174,6 @@ public class FTPClient {
         char value;
 
         while (true) {
-//            System.out.println("\treadString");
             value = (char)is.read();
             if (value == '\n') break;
             sb.append(value);
