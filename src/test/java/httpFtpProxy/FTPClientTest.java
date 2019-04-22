@@ -14,7 +14,7 @@ public class FTPClientTest {
 
         assertFalse(ftpClient.isConnected());
 
-        ftpClient.connect("localhost");
+        ftpClient.connect("ftp-server");
         assertTrue(ftpClient.isConnected());
 
         ftpClient.disconnect();
@@ -24,12 +24,12 @@ public class FTPClientTest {
     @Test
     public void badAuthTest() throws IOException {
 
-        ftpClient.connect("localhost");
+        ftpClient.connect("ftp-server");
         assertFalse(ftpClient.isAuth());
 
-        ftpClient.auth("nouser", "badpass");
-        assertFalse(ftpClient.isAuth());
-        // ???????
+        ftpClient.auth("testftp", "testftp");
+        assertTrue(ftpClient.isAuth());
+
         ftpClient.disconnect();
     }
 

@@ -1,0 +1,20 @@
+version: '3.3'
+
+services:
+
+  ftp-server:
+    image: fauria/vsftpd
+    environment:
+      FTP_USER: testftp
+      FTP_PASS: testftp
+      PASV_ADDRESS_ENABLE: "YES"
+      PASV_ADDR_RESOLVE: "YES"
+    ports:
+      - 20:20
+      - 21:21
+      - 21100-21110:21100-21110
+
+  http-ftp-proxy:
+    image: http-ftp-proxy-test
+    depends_on:
+      - ftp-server
