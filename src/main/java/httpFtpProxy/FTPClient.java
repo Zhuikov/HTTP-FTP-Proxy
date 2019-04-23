@@ -32,11 +32,7 @@ public class FTPClient {
 
 
     public String connect(String address) throws IOException {
-//        try {
-            controlSocket = new Socket(address, 21);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        controlSocket = new Socket(address, 21);
         return readResponse(controlSocket).substring(0, 3);
     }
 
