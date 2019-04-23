@@ -11,7 +11,8 @@ import static org.junit.Assert.*;
 public class FTPClientTest {
 
     private FTPClient ftpClient = new FTPClient();
-    static final String serverAddress = "ftp-server";
+    static final String serverAddress = System.getenv("hostFtpServerName") == null ?
+            "localhost" : System.getenv("hostFtpServerName");
     static final String username = "testftp";
     static final String password = "testftp";
 
@@ -49,6 +50,8 @@ public class FTPClientTest {
         Proxy.DataAndCode response = ftpClient.pwd();
         assertEquals(response.getCode(), "257");
         assertEquals(response.getData().get(0).charValue(), '/');
+
+        ftpClient.disconnect();
     }
 
     @Test
@@ -60,16 +63,51 @@ public class FTPClientTest {
         Proxy.DataAndCode response =
                 ftpClient.sendDataCommand("retr", "./test_image.jpg", 'I');
 
-        FileInputStream fileInputStream = new FileInputStream("./test_files/test_image.jpg");
-        int i;
-        ArrayList<Character> file = new ArrayList<>();
-        while ((i = fileInputStream.read()) != -1) {
-            file.add((char)i);
-        }
-        fileInputStream.close();
+        ArrayList<Character> file = getFileData("./test_files/testftp/test_image.jpg");
 
         assertEquals(response.getCode(), "226");
         assertEquals(file, response.getData());
+
+        ftpClient.disconnect();
+    }
+
+    @Test
+    public void uploadAndDeleteTest() throws IOException {
+
+        ftpClient.connect(serverAddress);
+        ftpClient.auth(username, password);
+
+        ArrayList<Character> fileData = getFileData("./Dockerfile");
+        String uploadCode = ftpClient.stor(fileData, "./test_Dockerfile", 'A');
+
+        assertEquals(uploadCode, "226");
+
+        Proxy.DataAndCode downloadFileResponse =
+                ftpClient.sendDataCommand("retr", "./test_Dockerfile", 'A');
+        assertEquals(downloadFileResponse.getCode(), "226");
+
+        assertEquals(fileData, downloadFileResponse.getData());
+
+        String deleteCode = ftpClient.dele("./test_Dockerfile");
+
+        assertEquals(deleteCode, "250");
+
+        ftpClient.disconnect();
+    }
+
+    private ArrayList<Character> getFileData(String path) {
+
+        ArrayList<Character> fileData = new ArrayList<>();
+        try (FileInputStream fileInputStream = new FileInputStream(path)) {
+            int i;
+            while ((i = fileInputStream.read()) != -1) {
+                fileData.add((char) i);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return fileData;
     }
 
 }

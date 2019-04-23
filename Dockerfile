@@ -1,7 +1,8 @@
 FROM gradle:jdk8
 
-WORKDIR /Proxy_HTTP_FTP
+WORKDIR /home/gradle
 
+ENV hostFtpServerName="ftp-server"
 ADD --chown=gradle . .
 
 ENTRYPOINT gradle test

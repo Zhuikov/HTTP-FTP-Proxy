@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    id 'jacoco'
+    id 'com.github.ksoichiro.console.reporter' version '0.6.2'
 }
 
 group 'zhuikov'
@@ -21,3 +23,13 @@ test {
         showStandardStreams = true
     }
 }
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled true
+        html.destination file("${buildDir}/jacocoHtml")
+    }
+}
+jacocoTestReport.finalizedBy check
+test.finalizedBy jacocoTestReport

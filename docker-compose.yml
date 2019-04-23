@@ -12,9 +12,9 @@ services:
     volumes:
       - ./test_files:/home/vsftpd
     ports:
-#      - 20:20
-      - 21:21
-#      - 21100-21110:21100-21110
+      - "20:20"
+      - "21:21"
+      - "21100-21110:21100-21110"
 
   http-ftp-proxy:
     image: http-ftp-proxy-test
