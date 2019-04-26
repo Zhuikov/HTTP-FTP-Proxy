@@ -133,9 +133,6 @@ public class Proxy {
 
     public Proxy() {}
 
-    public boolean isClosed() {
-        return listeningSocket.isClosed();
-    }
 
     public void start(int port) throws IOException {
 
