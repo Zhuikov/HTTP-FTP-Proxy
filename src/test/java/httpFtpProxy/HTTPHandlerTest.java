@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 
 public class HTTPHandlerTest {
 
-    private FTPServer ftpServer = new FTPServer();
+    private EchoServer echoServer = new EchoServer();
 
     private static HTTPHandler handler = new HTTPHandler();
     private static final String login = "anonymous";
@@ -22,28 +22,28 @@ public class HTTPHandlerTest {
 
     @Before
     public void setUp() throws IOException {
-        ftpServer.begin();
-        ftpServer.start();
+        echoServer.begin();
+        echoServer.start();
     }
 
     @After
     public void tearDown() throws IOException {
-        ftpServer.close();
+        echoServer.close();
     }
 
     @Test
     public void receiveGetRequest() throws IOException {
         String response = "GET ftp.sunet.su/file/path/to/file/\n" +
-                "Host: " + FTPServer.host +
+                "Host: " + EchoServer.host +
                 "\nAuthorization: Basic " + encodedLoginPass +
                 "\nContent-Length: 0\n\n";
 
-        ftpServer.setMessage(response);
-        Socket client = new Socket(FTPServer.host, FTPServer.port);
+        echoServer.setMessage(response);
+        Socket client = new Socket(EchoServer.host, EchoServer.port);
         Proxy.HTTPRequest request = handler.receiveRequest(client);
 
         assertEquals(request.getMethod(), Proxy.Method.GET);
-        assertEquals(request.getHostName(), FTPServer.host);
+        assertEquals(request.getHostName(), EchoServer.host);
         assertEquals(request.getPath(), "ftp.sunet.su/path/to/file/");
         assertTrue(request.isFile());
         assertEquals(request.getLogin(), login);
@@ -59,15 +59,15 @@ public class HTTPHandlerTest {
         ArrayList<Character> body =
                 new ArrayList<>(Arrays.asList('1', '2', '3', '4'));
         String response = "PUT ftp.sunet.su/file/serverFile/path\n" +
-                "Host: " + FTPServer.host +
+                "Host: " + EchoServer.host +
                 "\nAuthorization: Basic " + encodedLoginPass +
                 "\nContent-Length: 4\n\n" + "1234";
-        ftpServer.setMessage(response);
-        Socket client = new Socket(FTPServer.host, FTPServer.port);
+        echoServer.setMessage(response);
+        Socket client = new Socket(EchoServer.host, EchoServer.port);
         Proxy.HTTPRequest request = handler.receiveRequest(client);
 
         assertEquals(request.getMethod(), Proxy.Method.PUT);
-        assertEquals(request.getHostName(), FTPServer.host);
+        assertEquals(request.getHostName(), EchoServer.host);
         assertEquals(request.getPath(), "ftp.sunet.su/serverFile/path");
         assertTrue(request.isFile());
         assertEquals(request.getLogin(), login);
@@ -81,15 +81,15 @@ public class HTTPHandlerTest {
     @Test
     public void receiveFtpCommand() throws IOException {
         String response = "GET ftp.sunet.su/cwd?dir=\"/path/of/dir/\"\n" +
-                "Host: " + FTPServer.host +
+                "Host: " + EchoServer.host +
                 "\nAuthorization: Basic " + encodedLoginPass +
                 "\nContent-Length: 0\n\n";
-        ftpServer.setMessage(response);
-        Socket client = new Socket(FTPServer.host, FTPServer.port);
+        echoServer.setMessage(response);
+        Socket client = new Socket(EchoServer.host, EchoServer.port);
         Proxy.HTTPRequest request = handler.receiveRequest(client);
 
         assertEquals(request.getMethod(), Proxy.Method.GET);
-        assertEquals(request.getHostName(), FTPServer.host);
+        assertEquals(request.getHostName(), EchoServer.host);
         assertEquals(request.getPath(), "ftp.sunet.su/");
         assertFalse(request.isFile());
         assertEquals(request.getLogin(), login);
@@ -103,8 +103,8 @@ public class HTTPHandlerTest {
     @Test
     public void receiveRandomHeaders() throws IOException {
         String response = "132213ke932e233e\n\n";
-        ftpServer.setMessage(response);
-        Socket client = new Socket(FTPServer.host, FTPServer.port);
+        echoServer.setMessage(response);
+        Socket client = new Socket(EchoServer.host, EchoServer.port);
         Proxy.HTTPRequest request = handler.receiveRequest(client);
 
         assertNull(request.getMethod());

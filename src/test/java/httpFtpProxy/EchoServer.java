@@ -5,7 +5,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class FTPServer extends Thread {
+public class EchoServer extends Thread {
 
     public static final int port = 7500;
     public static final String host = "127.0.0.1";

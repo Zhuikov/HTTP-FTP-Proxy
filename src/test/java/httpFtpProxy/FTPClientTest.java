@@ -11,13 +11,30 @@ import static org.junit.Assert.*;
 public class FTPClientTest {
 
     private FTPClient ftpClient = new FTPClient();
-    static final String serverAddress = System.getenv("hostFtpServerName") == null ?
-            "localhost" : System.getenv("hostFtpServerName");
-    static final String username = "testftp";
-    static final String password = "testftp";
+    static private final String serverAddress = System.getenv("HOST_FTP_SERVER_NAME") == null ?
+            "localhost" : System.getenv("HOST_FTP_SERVER_NAME");
+    static private final String username = "testftp";
+    static private final String password = "testftp";
+
+    static public ArrayList<Character> getFileData(String path) {
+
+        ArrayList<Character> fileData = new ArrayList<>();
+        try (FileInputStream fileInputStream = new FileInputStream(path)) {
+            int i;
+            while ((i = fileInputStream.read()) != -1) {
+                fileData.add((char) i);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return fileData;
+    }
 
     @Test
     public void connectionTest() throws IOException {
+
+        System.out.println("SERVER ADDRESS (ftpClientTest) = " + serverAddress);
 
         assertFalse(ftpClient.isConnected());
 
@@ -93,21 +110,6 @@ public class FTPClientTest {
         assertEquals(deleteCode, "250");
 
         ftpClient.disconnect();
-    }
-
-    private ArrayList<Character> getFileData(String path) {
-
-        ArrayList<Character> fileData = new ArrayList<>();
-        try (FileInputStream fileInputStream = new FileInputStream(path)) {
-            int i;
-            while ((i = fileInputStream.read()) != -1) {
-                fileData.add((char) i);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return fileData;
     }
 
 }

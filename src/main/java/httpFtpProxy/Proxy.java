@@ -3,6 +3,7 @@ package httpFtpProxy;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 
 public class Proxy {
@@ -132,6 +133,10 @@ public class Proxy {
 
     public Proxy() {}
 
+    public boolean isClosed() {
+        return listeningSocket.isClosed();
+    }
+
     public void start(int port) throws IOException {
 
         HTTPHandler httpHandler = new HTTPHandler();
@@ -139,7 +144,13 @@ public class Proxy {
         listeningSocket = new ServerSocket(port);
 
         while (true) {
-            clientSocket = listeningSocket.accept();
+
+            try {
+                clientSocket = listeningSocket.accept();
+            } catch (SocketException e) {
+                System.out.println("proxy stopped");
+                break;
+            }
             HTTPRequest httpRequest = httpHandler.receiveRequest(clientSocket);
             // todo может быть добавить метод валидации пакета
 
@@ -230,6 +241,10 @@ public class Proxy {
         }
     }
 
+    public void stop() throws IOException {
+        listeningSocket.close();
+    }
+
     private DataAndCode processRequestGET(HTTPRequest httpRequest) throws IOException {
 
         DataAndCode dataAndCode;
@@ -270,49 +285,4 @@ public class Proxy {
         String dir = httpRequest.path.substring(httpRequest.path.indexOf('/'));
         return ftpClient.dele(dir);
     }
-
-    // ftp testing
-    public static void main2(String[] args) throws IOException {
-
-        FTPClient ftpClient = new FTPClient();
-
-        System.out.println("connect = " + ftpClient.connect("192.168.0.27"));
-
-        System.out.println("auth = " + ftpClient.auth("artem", "artem"));
-
-        FileInputStream fileInputStream = new FileInputStream("/home/artem/Pictures/RPN.jpg");
-        int i;
-        ArrayList<Character> file = new ArrayList<>();
-        while ((i = fileInputStream.read()) != -1) {
-            file.add((char)i);
-        }
-        fileInputStream.close();
-        System.out.println("stor = " + ftpClient.stor(file, "/ftp/RPN", 'I'));
-
-        DataAndCode dataAndCode = ftpClient.sendDataCommand("list","/ftp/", 'A');
-        System.out.println("list = " + dataAndCode.getCode());
-        for (char c : dataAndCode.getData()) {
-            System.out.print(c);
-        }
-
-        // retr
-        dataAndCode = ftpClient.sendDataCommand("retr","/ftp/RPN", 'I');
-        System.out.println("retr = " + dataAndCode.getCode());
-
-        // save retr file test:
-        OutputStream fileOut = new FileOutputStream("/home/artem/Documents/proxyTest/downloadedRPN1.jpg");
-        for (char b : dataAndCode.getData()) {
-            fileOut.write(b);
-        }
-        fileOut.close();
-
-        // delete and list
-        System.out.println("Dele = " + ftpClient.dele("/ftp/RPN"));
-        dataAndCode = ftpClient.sendDataCommand("list","/ftp/", 'A');
-        System.out.println("list = " + dataAndCode.getCode());
-        for (char c : dataAndCode.getData()) {
-            System.out.print(c);
-        }
-    }
-
 }

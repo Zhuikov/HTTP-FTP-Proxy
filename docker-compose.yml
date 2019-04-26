@@ -18,5 +18,7 @@ services:
 
   http-ftp-proxy:
     image: http-ftp-proxy-test
+    environment:
+      HOST_FTP_SERVER_NAME: "ftp-server"
     depends_on:
       - ftp-server
